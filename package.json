@@ -1,0 +1,25 @@
+{
+  "name": "kijiji-scraper",
+  "version": "1.0.0",
+  "description": "A scraper for Kijiji ads",
+  "main": "index.js",
+  "dependencies": {
+    "cheerio": "~0.18.0",
+    "request": "~2.53.0"
+  },
+  "devDependencies": {},
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mwpenny/kijiji-scraper.git"
+  },
+  "keywords": [
+    "kijiji",
+    "scraper"
+  ],
+  "author": "Matt Penny",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mwpenny/kijiji-scraper/issues"
+  }
+}
