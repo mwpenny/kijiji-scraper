@@ -55,7 +55,7 @@ Will call `callback` with an array of detailed ad objects.
     "minPrice": 0,
     "maxPrice": 100,
     "keywords": "keyword string with words separated by a '+'",
-    adType: "OFFER"
+    "adType": "OFFER"
 }
 ```
  
