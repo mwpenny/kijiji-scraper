@@ -20,7 +20,7 @@ var scrapeAdLinks = function(ads, callback) {
     //Scrape each ad
     for (var i=0; i < ads.length; i++) {
         scrapeAdLink(ads[i], function(err) {
-            if (err) callback(err, null);
+            if (err) return callback(err, null);
             
             //Call callback once everything is scraped
             if (++scraped == ads.length) {
@@ -56,7 +56,7 @@ var query = function(prefs, params, callback) {
 
     //Search Kijiji
     request({"url": url, "qs": params}, function(err, res, body) {
-        if (err) callback(err, null);
+        if (err) return callback(err, null);
         scrapeAdLinks(parseXML(body), callback);
     });
 }

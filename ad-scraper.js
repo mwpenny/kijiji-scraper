@@ -34,7 +34,7 @@ var parseHTML = function(html) {
 /*Scrapes the passed Kijiji ad URL*/
 var scrape = function(url, callback) {
     request(url, function(err, res, body) {
-        if (err) callback(err, null);
+        if (err) return callback(err, null);
         callback(null, parseHTML(body));
     });
 }
