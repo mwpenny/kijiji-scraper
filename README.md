@@ -60,7 +60,7 @@ Will call `callback` with an array of detailed ad objects.
 ```
  
  There are many different search parameters, most of which vary by category type. You can find them by using your browser's developer tools and performing a custom search on Kijiji.
-* `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different then the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field iniside an ad's `<item>` tag in the RSS feed, as well as an `innerAd` object, which is identical to the ad object returned by `scrape()`. These more detailed ads are of the form
+* `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different from the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field iniside an ad's `<item>` tag in the RSS feed, as well as an `innerAd` object, which is identical to the ad object returned by `scrape()`. These more detailed ads are of the form
 ```js
 {
     "title": "ad title",
