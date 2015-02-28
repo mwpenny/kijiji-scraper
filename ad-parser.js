@@ -33,8 +33,7 @@ var adToString = function(ad) {
         return ad.title + "\r\n" + innerAdToString(ad);
         
     //Otherwise, parse the inner ad
-    } else {
-    
+    } else {    
         var date = parseDateString(ad["dc:date"]);
         var str = "[" + date + "] " + ad.title + "\r\n" +
                   "   >Link: " + ad.link + "\r\n";

@@ -23,7 +23,7 @@ var scrapeAdLinks = function(ads, callback) {
             if (err) return callback(err, null);
             
             //Call callback once everything is scraped
-            if (++scraped == ads.length) {
+            if (++scraped === ads.length) {
                 callback(null, ads);
             }
         });

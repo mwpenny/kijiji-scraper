@@ -1,4 +1,4 @@
-# kijiji-parser
+# kijiji-scraper
 A lightweight node.js module for retrieving and scraping ads from [Kijiji](http://www.kijiji.ca).
 
 
@@ -9,7 +9,7 @@ A lightweight node.js module for retrieving and scraping ads from [Kijiji](http:
 ### Dependencies
 * [node.js](http://github.com/joyent/node) - evented I/O for the backend
 * [cheerio](http://www.github.com/cheeriojs/cheerio) - jQuery-like API for the server
-* [request](http://github.com/request/request) - Simple HTTP reqsest client
+* [request](http://github.com/request/request) - Simple HTTP request client
 
 ### Installation
 `npm install kijiji-scraper`
