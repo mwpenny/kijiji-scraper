@@ -17,6 +17,8 @@ var scrapeAdLink = function(rssAd, callback) {
 var scrapeAdLinks = function(ads, callback) {
     var scraped = 0;
 
+    if (ads.length === 0) return callback(null, ads);
+
     //Scrape each ad
     for (var i=0; i < ads.length; i++) {
         scrapeAdLink(ads[i], function(err) {
@@ -24,7 +26,7 @@ var scrapeAdLinks = function(ads, callback) {
             
             //Call callback once everything is scraped
             if (++scraped === ads.length) {
-                callback(null, ads);
+                return callback(null, ads);
             }
         });
     }
@@ -37,7 +39,7 @@ var parseXML = function(xml) {
 
     //Get info for each ad
     $("item").each(function(i,item) {
-        var ad = {};    
+        var ad = {};
         $(item).children().each(function(i, child) {
             ad[child.name] = $(child).text();
         });    
