@@ -6,7 +6,7 @@ var cheerio = require("cheerio");
 
 /*Parses the HTML of a Kijiji ad for its important information*/
 var parseHTML = function(html) {
-    var ad = {"info": []};
+    var ad = {"info": {}};
     var $ = cheerio.load(html);
 
     //Get ad title and main image
