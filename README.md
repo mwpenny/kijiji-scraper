@@ -49,6 +49,9 @@ Will call `callback` with an array of detailed ad objects.
     "categoryId": <Kijiji ad category id>
 }
 ```
+
+Values for `locationId` and `categoryId` can be found by performing a search and looking at the POST request parameters or the URL Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
+
 * `params` - Contains Kijiji ad search criteria:
 ```js
 {
@@ -58,8 +61,9 @@ Will call `callback` with an array of detailed ad objects.
     "adType": "OFFER"
 }
 ```
- 
- There are many different search parameters, most of which vary by category type. You can find them by using your browser's developer tools and performing a custom search on Kijiji.
+
+There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on Kijiji.
+
 * `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different from the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field iniside an ad's `<item>` tag in the RSS feed, as well as an `innerAd` object, which is identical to the ad object returned by `scrape()`. These more detailed ads are of the form
 ```js
 {
