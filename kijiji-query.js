@@ -21,7 +21,6 @@ var scrapeAdLinks = function(ads, callback) {
 
     //Scrape each ad
     for (var i=0; i < ads.length; i++) {
-        ads[i].innerAd = {};
         scrapeAdLink(ads[i], function(err) {
             if (err) return callback(err, null);
 
@@ -45,6 +44,7 @@ var parseXML = function(xml) {
             ad[child.name] = $(child).text();
         });
 
+        ad.innerAd = {};
         ads.push(ad);
     });
 
