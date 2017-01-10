@@ -46,11 +46,14 @@ Will call `callback` with an array of detailed ad objects.
 ```js
 {
     "locationId": <Kijiji location id>,
-    "categoryId": <Kijiji ad category id>
+    "categoryId": <Kijiji ad category id>,
+    "scrapeInnerAd": true/false (default true)
 }
 ```
 
 Values for `locationId` and `categoryId` can be found by performing a search and looking at the POST request parameters or the URL Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
+
+By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set the `scrapeInnerAd` preference to `false`.
 
 * `params` - Contains Kijiji ad search criteria:
 ```js
@@ -64,7 +67,7 @@ Values for `locationId` and `categoryId` can be found by performing a search and
 
 There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on Kijiji.
 
-* `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different from the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field iniside an ad's `<item>` tag in the RSS feed, as well as an `innerAd` object, which is identical to the ad object returned by `scrape()`. These more detailed ads are of the form
+* `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different from the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field inside an ad's `<item>` tag in the RSS feed plus an `innerAd` property. This property will contain an object identical to the ad object returned by `scrape()` unless `scrapeInnerAd` was given as `false`, in which case the property will contain an empty object. These more detailed ads are of the form
 ```js
 {
     "title": "ad title",

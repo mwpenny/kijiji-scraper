@@ -23,7 +23,7 @@ var scrapeAdLinks = function(ads, callback) {
     for (var i=0; i < ads.length; i++) {
         scrapeAdLink(ads[i], function(err) {
             if (err) return callback(err, null);
-            
+
             //Call callback once everything is scraped
             if (++scraped === ads.length) {
                 return callback(null, ads);
@@ -42,8 +42,8 @@ var parseXML = function(xml) {
         var ad = {};
         $(item).children().each(function(i, child) {
             ad[child.name] = $(child).text();
-        });    
-    
+        });
+
         ad.innerAd = {};
         ads.push(ad);
     });
@@ -59,7 +59,13 @@ var query = function(prefs, params, callback) {
     //Search Kijiji
     request({"url": url, "qs": params}, function(err, res, body) {
         if (err) return callback(err, null);
-        scrapeAdLinks(parseXML(body), callback);
+
+        var ads = parseXML(body);
+        if (prefs.scrapeInnerAd !== false) {
+            scrapeAdLinks(ads, callback);
+        } else {
+            callback(null, ads);
+        }
     });
 }
 
