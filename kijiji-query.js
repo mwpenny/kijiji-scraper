@@ -61,7 +61,7 @@ var query = function(prefs, params, callback) {
         if (err) return callback(err, null);
 
         var ads = parseXML(body);
-        if (prefs.scrape !== false) {
+        if (prefs.scrapeInnerAd !== false) {
             scrapeAdLinks(ads, callback);
         } else {
             callback(null, ads);
