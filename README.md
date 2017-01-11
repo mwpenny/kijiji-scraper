@@ -25,10 +25,13 @@ Will call `callback` with an object representing the ad at `url`.
 {
     "title": "ad title",
     "image": "ad image URL",
+    "images": ["ad image URL 1", "ad image URL 2", ..., "ad image URL n"],
     "desc": "ad description"
     "info": [<category-specific keys and values>]
 }
 ```
+
+The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024.
 
 ##### Example usage
 ```js
