@@ -12,6 +12,12 @@ var parseHTML = function(html) {
     //Get ad title and main image
     ad.title = $("span[itemprop=name]").text();
     ad.image = $("img[itemprop=image]").attr("src");
+    ad.images = $("img[itemprop=image]").map(function (_, el) {
+        /* Kijiji/eBay image URLs typically end with "$_dd.JPG", where "dd" is a
+         * number between 0 and 140 indicating the desired image size and
+         * quality. "57" is up to 1024x1024, the largest I've found. */
+        return $(el).attr("src").replace(/\/\$_\d+\.JPG$/, '/$_57.JPG');
+    }).get();
     
     //Remove link to map and dividers from info table
     $("#MapLink").remove();
