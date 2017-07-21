@@ -31,7 +31,7 @@ Will call `callback` with an object representing the ad at `url`.
 }
 ```
 
-The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024.
+The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024. If `info` contains the key "Date Listed", its corresponding value will be converted to a JavaScript `Date` object.
 
 ##### Example usage
 ```js
