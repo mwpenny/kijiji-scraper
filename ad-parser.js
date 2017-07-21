@@ -1,8 +1,8 @@
-//ad-parser.js
-/*Helper functions for Kijiji ad objects*/
+// ad-parser.js
+/* Helper functions for Kijiji ad objects */
 
-/*Nicely formats a date string*/
-var parseDateString = function(dateStr) {
+/* Nicely formats a date string */
+function parseDateString(dateStr) {
     var date = new Date(dateStr);
     var m = ("0" + (date.getMonth()+1)).slice(-2);
     var d = ("0" + date.getDate()).slice(-2);
@@ -12,31 +12,31 @@ var parseDateString = function(dateStr) {
     return m + "/" + d + "/" + y + " @ " + hrs + ":" + mins;
 }
 
-/*Converts a Kijiji innerAd object to a string*/
-var innerAdToString = function(ad) {
+/* Converts a Kijiji innerAd object to a string */
+function innerAdToString(ad) {
     var str = "";
     
-    //Add each inner ad property
+    // Add each inner ad property
     for (var prop in ad.info) {
         if (ad.info.hasOwnProperty(prop)) {
-            str += "   >" + prop + ": " + ad.info[prop] + "\r\n";
+            str += "  > " + prop + ": " + ad.info[prop] + "\r\n";
         }
     }
     
     return str;
 };
 
-/*Converts a Kijiji ad object to a string*/
-var adToString = function(ad) {
-    //If this is an inner ad, just parse this
+/* Converts a Kijiji ad object to a string */
+function adToString(ad) {
+    // If this is an inner ad, just parse this
     if (!ad.hasOwnProperty("innerAd")) {
         return ad.title + "\r\n" + innerAdToString(ad);
         
-    //Otherwise, parse the inner ad
+    // Otherwise, parse the inner ad
     } else {    
         var date = parseDateString(ad["dc:date"]);
         var str = "[" + date + "] " + ad.title + "\r\n" +
-                  "   >Link: " + ad.link + "\r\n";
+                  "  > Link: " + ad.link + "\r\n";
         str += innerAdToString(ad.innerAd);
         return str;    
     }

@@ -1,20 +1,20 @@
-//kijiji-query.js
-/*Searches Kijiji for recend ads matching given criteria*/
+// kijiji-query.js
+/* Searches Kijiji for recend ads matching given criteria */
 
 var request = require("request");
 var cheerio = require("cheerio");
 var scraper = require("./ad-scraper.js");
 
-/*Scrapes a Kijiji ad's link*/
-var scrapeAdLink = function(rssAd, callback) {
+/* Scrapes a Kijiji ad's link */
+function scrapeAdLink(rssAd, callback) {
     scraper(rssAd.link, function(err, ad) {
         if (!err) rssAd.innerAd = ad;
         callback(err);
     });
 };
 
-/*Scrapes each passed ad's link to get more information about it*/
-var scrapeAdLinks = function(ads, callback) {
+/* Scrapes each passed ad's link to get more information about it */
+function scrapeAdLinks(ads, callback) {
     var scraped = 0;
 
     if (ads.length === 0) return callback(null, ads);
@@ -32,12 +32,12 @@ var scrapeAdLinks = function(ads, callback) {
     }
 };
 
-/*Parses the XML of a Kijiji RSS feed for ads*/
-var parseXML = function(xml) {
+/* Parses the XML of a Kijiji RSS feed for ads */
+function parseXML(xml) {
     var ads = [];
     var $ = cheerio.load(xml, {xmlMode: true});
 
-    //Get info for each ad
+    // Get info for each ad
     $("item").each(function(i,item) {
         var ad = {};
         $(item).children().each(function(i, child) {
@@ -51,12 +51,12 @@ var parseXML = function(xml) {
     return ads;
 }
 
-/*Searches recent Kijiji ads using passed criteria*/
-var query = function(prefs, params, callback) {
+/* Searches recent Kijiji ads using passed criteria */
+function query(prefs, params, callback) {
     var url = "http://www.kijiji.ca/rss-srp/c" + prefs.categoryId +
               "l" + prefs.locationId;
 
-    //Search Kijiji
+    // Search Kijiji
     request({"url": url, "qs": params}, function(err, res, body) {
         if (err) return callback(err, null);
 

@@ -1,5 +1,5 @@
-//index.js
-/*Exports the kijiji-scraper modules*/
+// index.js
+/* Exports the kijiji-scraper modules */
 
 module.exports.parse = require("./ad-parser.js");
 module.exports.scrape = require("./ad-scraper.js");
