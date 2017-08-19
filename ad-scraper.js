@@ -6,6 +6,13 @@ var cheerio = require("cheerio");
 
 var IMG_REGEX = /\/\$_\d+\.JPG$/;
 
+function cleanDesc(text) {
+    // Some descriptions contain HTML. Remove it so it is only text
+    $ = cheerio.load(text);
+    $("label").remove();  // Remove kit-ref-id label
+    return $.root().text().trim();
+}
+
 /* Parses the HTML of a Kijiji ad for its important information.
    Kijiji has changed their layout, but only for some ads. We will
    hope for the new, nicer format and fall back to the old */
@@ -34,7 +41,7 @@ function parseHTML(html) {
 
     if (adData && adData.hasOwnProperty("VIP")) {
         // New format is *really* nice and gives us all we could ask for (and more)
-        ad.desc = adData.VIP.description;
+        ad.desc = cleanDesc(adData.VIP.description);
         adData.VIP.media.forEach(function(m) {
             if (m.type == "image") {
                 ad.images.push(m.href.replace(IMG_REGEX, '/$_57.JPG'));
