@@ -3,7 +3,7 @@ A lightweight node.js module for retrieving and scraping ads from [Kijiji](http:
 
 
 ### Features
-* Retrieve single ads as JSON objects given their URL
+* Retrieve single ads as JavaScript objects given their URL
 * Retrieve the 20 latest ads matching given search criteria
 
 ### Dependencies
