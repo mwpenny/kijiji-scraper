@@ -58,8 +58,11 @@ function parseHTML(html) {
             ad.info['Date Listed'] = new Date(adData.VIP.sortingDate);
         if (adData.VIP.price)
             ad.info['Price'] = "$" + (adData.VIP.price.amount/100.0).toFixed(2);
-        if (adData.VIP.adLocation)
+        if (adData.VIP.adLocation) {
             ad.info['Address'] = adData.VIP.adLocation.mapAddress;
+            ad.info['Latitude'] = adData.VIP.adLocation.latitude;
+            ad.info['Longitude'] = adData.VIP.adLocation.longitude;
+        }
         if (adData.VIP.adType)
             ad.info['Type'] = adData.VIP.adType;
         if (adData.VIP.visitCounter)
