@@ -49,7 +49,7 @@ function parseHTML(html) {
         });
         adData.VIP.adAttributes.forEach(function(a) {
             var attr = a.localeSpecificValues.en;
-            ad.info[attr.label] = attr.value;
+            ad.info[attr.label] = a.machineValue;
         });
 
         // Other attributes of interest (I'm attempting to match the old output)
