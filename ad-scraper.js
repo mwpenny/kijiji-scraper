@@ -1,106 +1,107 @@
 // ad-scraper.js
 /* Scrapes a Kijiji ad and returns its information */
 
-var request = require("request");
-var cheerio = require("cheerio");
+const request = require("request");
+const cheerio = require("cheerio");
 
-var IMG_REGEX = /\/\$_\d+\.JPG$/;
+const IMG_REGEX = /\/\$_\d+\.JPG$/;
 
 function cleanDesc(text) {
     // Some descriptions contain HTML. Remove it so it is only text
-    $ = cheerio.load(text);
+    let $ = cheerio.load(text);
     $("label").remove();  // Remove kit-ref-id label
     return $.root().text().trim();
+}
+
+function castVal(val) {
+    // Kijiji only returns strings. Convert to appropriate types */
+    if (val === "true")
+        return true;
+    else if (val === "false")
+        return false;
+    else if (!Number.isNaN(Number(val)) && Number.isFinite(Number(val)))
+        return Number(val);
+    else if (!isNaN(Date.parse(val)))
+        return new Date(val);
+    else
+        return val;
 }
 
 /* Parses the HTML of a Kijiji ad for its important information.
    Kijiji has changed their layout, but only for some ads. We will
    hope for the new, nicer format and fall back to the old */
 function parseHTML(html) {
-    var ad = {
-        "title": undefined,
-        "image": undefined,
+    let info = {
+        "title": "",
+        "image": "",
+        "date": null,
         "images": [],
-        "info": {},
-        "desc": ""
+        "description": "",
+        "attributes": {}
     };
 
-    // Kijiji is nice and gives us JS with some ad info
-    var $ = cheerio.load(html);
-    var adData = {};
-    var json = $("#FesLoader > script").text().replace("window.__data=", "");
+    // Kijiji is nice and gives us an object containing ad info
+    let $ = cheerio.load(html);
+    let adData = {};
+    let json = $("#FesLoader > script").text().replace("window.__data=", "");
     json = json.substring(0, json.length - 1);  // Remove trailing semicolon
 
     if (json.length == 0 || (adData = JSON.parse(json)) == {} ||
-        !adData.hasOwnProperty("config") || !adData.config.hasOwnProperty("adInfo")) {
-        return ad;
+        !adData.hasOwnProperty("config") || !adData.config.hasOwnProperty("adInfo") ||
+        !adData.config.hasOwnProperty("VIP")) {
+        return null;
     }
     adData = adData.config;
-    ad.title = adData.adInfo.title;
-    ad.image = adData.adInfo.sharingImageUrl
+    info.title = adData.adInfo.title;
+    info.image = adData.adInfo.sharingImageUrl
+    info.description = cleanDesc(adData.VIP.description);
+    info.date = new Date(adData.VIP.sortingDate);
 
-    if (adData && adData.hasOwnProperty("VIP")) {
-        // New format is *really* nice and gives us all we could ask for (and more)
-        ad.desc = cleanDesc(adData.VIP.description);
-        adData.VIP.media.forEach(function(m) {
-            if (m.type == "image") {
-                ad.images.push(m.href.replace(IMG_REGEX, '/$_57.JPG'));
-            }
-        });
-        adData.VIP.adAttributes.forEach(function(a) {
-            var attr = a.localeSpecificValues.en;
-            ad.info[attr.label] = a.machineValue;
-        });
-
-        // Other attributes of interest (I'm attempting to match the old output)
-        // TODO: This VIP object contains much more. Worth a closer look.
-        if (adData.VIP.sortingDate)
-            ad.info['Date Listed'] = new Date(adData.VIP.sortingDate);
-        if (adData.VIP.price)
-            ad.info['Price'] = "$" + (adData.VIP.price.amount/100.0).toFixed(2);
-        if (adData.VIP.adLocation) {
-            ad.info['Address'] = adData.VIP.adLocation.mapAddress;
-            ad.info['Latitude'] = adData.VIP.adLocation.latitude;
-            ad.info['Longitude'] = adData.VIP.adLocation.longitude;
+    /* Kijiji/eBay image URLs typically end with "$_dd.JPG", where "dd" is a
+       number between 0 and 140 indicating the desired image size and
+       quality. "57" is up to 1024x1024, the largest I've found. */
+    adData.VIP.media.forEach(function(m) {
+        if (m.type == "image") {
+            info.images.push(m.href.replace(IMG_REGEX, "/$_57.JPG"));
         }
-        if (adData.VIP.adType)
-            ad.info['Type'] = adData.VIP.adType;
-        if (adData.VIP.visitCounter)
-            ad.info['Visits'] = adData.VIP.visitCounter;
-    } else {
-        // Old format isn't so nice, so we still have to scrape some things from the HTML
-        ad.desc = $("span[itemprop=description]").text().trim().replace("\r", "\n\n");
-        ad.images = $("img[itemprop=image]").map(function (_, img) {
-            /* Kijiji/eBay image URLs typically end with "$_dd.JPG", where "dd" is a
-               number between 0 and 140 indicating the desired image size and
-               quality. "57" is up to 1024x1024, the largest I've found. */
-            return $(img).attr("src").replace(IMG_REGEX, '/$_57.JPG');
-        }).get();
+    });
+    adData.VIP.adAttributes.forEach(function(a) {
+        info.attributes[a.machineKey] = castVal(a.machineValue);
+    });
 
-        // Remove link to map and dividers from info table
-        $("#MapLink").remove();
-        $(".divider").remove();
-
-        // Get ad properties from info table
-        $("table.ad-attributes tr").each(function(i, tr) {
-            var field = $(tr).find("th").text().trim();
-            var value = $(tr).find("td").text().trim();
-            if (field == "Date Listed")
-                value = new Date(value);
-            ad.info[field] = value;
-        });
+    // Add other attributes of interest
+    // TODO: This VIP object contains much more. Worth a closer look.
+    if (adData.VIP.price) {
+        info.attributes["price"] = adData.VIP.price.amount/100.0;
     }
-    return ad;
+    if (adData.VIP.adLocation) {
+        info.attributes["location"] = adData.VIP.adLocation;
+    }
+    if (adData.VIP.adType) {
+        info.attributes["type"] = adData.VIP.adType;
+    }
+    if (adData.VIP.visitCounter) {
+        info.attributes["visits"] = adData.VIP.visitCounter;
+    }
+    return info;
 }
 
 /* Scrapes the passed Kijiji ad URL */
 function scrape(url, callback) {
-    if (url === undefined)
-	    return callback(new Error("URL must not be undefined"));
+    if (!url) {
+        return callback(new Error("URL must be specified"));
+    }
 
     request(url, function(err, res, body) {
-        if (err) return callback(err, null);
-        callback(null, parseHTML(body));
+        if (err) {
+            return callback(err);
+        } else {
+            let adInfo = parseHTML(body);
+            if (!adInfo)
+                return callback(new Error("Ad not found or invalid Kijiji HTML at URL"));
+            adInfo.url = url;
+            callback(null, adInfo);
+        }
     });
 }
 
