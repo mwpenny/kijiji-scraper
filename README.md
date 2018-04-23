@@ -2,106 +2,205 @@
 A lightweight node.js module for retrieving and scraping ads from [Kijiji](http://www.kijiji.ca).
 
 
-### Features
+## Features
 * Retrieve single ads as JavaScript objects given their URL
-* Retrieve the 20 latest ads matching given search criteria
+* Retrieve the latest ads matching given search criteria
 
-### Dependencies
+## Dependencies
 * [node.js](http://github.com/joyent/node) - evented I/O for the backend
 * [cheerio](http://www.github.com/cheeriojs/cheerio) - jQuery-like API for the server
-* [request](http://github.com/request/request) - Simple HTTP request client
+* [request](http://github.com/request/request) - Simplified HTTP request client
 
-### Installation
+## Installation
 `npm install kijiji-scraper`
 
-### Documentation
+## Documentation
 
-#### scrape(url, callback)
-Will call `callback` with an object representing the ad at `url`.
-##### Arguments
+**Quick start:** Use `Ad.Get()` to scrape an ad given its URL. Use `search()` to scrape many ads given a set of search parameters. Read on (or CTRL+F) for more detailed information.
+
+### `Ad` class
+This class encapsulates a Kijiji ad and its properties. It also handles retrieving this information from Kijiji.
+
+#### Properties
+|Property      |Type    |Description                                          |
+|--------------|--------|-----------------------------------------------------|
+|`title`       |String  |Title of the ad                                      |
+|`description` |String  |Ad description                                       |
+|`date`        |Date    |Date the ad was posted                               |
+|`image`       |String  |URL of the ad's primary image                        |
+|`images`      |String[]|Array of URLs of the ad's images                     |
+|`attributes`  |Object  |Properties specific to the category of the scraped ad|
+|`url`         |String  |The ad's url                                         |
+
+The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024.
+
+**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to false. See the `Ad.isScraped()` and `Ad.scrape()` methods below for more information on this.
+
+#### Methods
+
+##### `Ad.Get(url, callback)`
+
+Will scrape the Kijiji ad at `url` and call `callback` with an object containing its information.
+
+###### Arguments
 * `url` - A Kijiji ad URL.
-* `callback(err, ad)` - A callback called after the ad has been scraped. If there is an error, `err` will not be null. If everything was successful, `ad` will contain the ad's properties. The `ad` object is of the form
+* `callback(err, ad)` - A callback called after the ad has been scraped. If there is an error, `err` will not be null. If everything was successful, `ad` will contain an `Ad` object.
+
+###### Example usage
 ```js
-{
-    "title": "ad title",
-    "image": "ad image URL",
-    "images": ["ad image URL 1", "ad image URL 2", ..., "ad image URL n"],
-    "desc": "ad description"
-    "info": [<category-specific keys and values>]
-}
-```
+const kijiji = require("kijiji-scraper");
 
-The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024. If `info` contains the key "Date Listed", its corresponding value will be converted to a JavaScript `Date` object.
-
-##### Example usage
-```js
-var kijiji = require("kijiji-scraper");
-
-kijiji.scrape("<Kijiji ad URL>", function(err, ad) {
-    //Use the ad object
+kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
+    if (!err) {
+        // Use the ad object
+        console.log(ad.title);
+    }
 });
 ```
+
+##### `Ad.Ad(url, info)`
+
+`Ad` constructor. Manually constructs an ad object. You should generally not need to use this save for a few special cases (e.g., storing ad URLs entered by a user for delayed scraping). `Ad.isScraped()` returns false for `Ad` objects constructed in this way until they are scraped by calling `Ad.scrape()`, which causes the scraper to replace the ad's information with what is found at its URL.
+
+###### Arguments
+* `url` - Ad's url.
+* `info` (optional) - Object containing the ad's properties. Only keys in the properties table (above) may be specified. May be omitted (if not specified then `images` will be the empty array, `attributes` will be an empty object, and all other properties will be null).
+
+###### Example usage
+```js
+const kijiji = require("kijiji-scraper");
+
+let ad = kijiji.Ad("<Kijiji ad URL>", { date: new Date() });
+console.log(ad.isScraped()); // false
+console.log(ad.date); // current date
+
+ad.scrape(function(err) {
+    if (!err) {
+        // Use the ad object
+        console.log(ad.date); // date ad was posted
+    }
+});
+```
+
+##### `Ad.isScraped()`
+
+Returns a boolean indicating whether or not an ad's information has been scraped from the page at its URL. This can be false if the `Ad` object was manually created using the constructor or if it was retrieved from a search with the `scrapeResultDetails` option set to false. Call `Ad.scrape()` to retrieve the information for such ads.
+
+###### Example usage
+```js
+const kijiji = require("kijiji-scraper");
+
+let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
+console.log(ad.isScraped()); // false
+```
+
+##### `Ad.scrape(callback)`
+
+Manually retrieves an `Ad`'s information from its URL. Useful if it was created in a way that does not do this automatically, such as using the constructor or performing a search with the `scrapeResultDetails` option set to false.
+
+* `callback(err)` - A callback called after the ad has been scraped. If there is an error, `err` will not be null.
+
+###### Example usage
+```js
+const kijiji = require("kijiji-scraper");
+
+let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
+console.log(ad.isScraped()); // false
+
+ad.scrape(function(err) {
+    if (!err) {
+        // Use the ad object
+        console.log(ad.isScraped()); // true
+        console.log(ad.title);
+    }
+});
+```
+
+##### `Ad.toString()`
+
+Returns a string representation of the ad. This is just meant to be a summary and may omit information for brevity or change in the future. Access the `Ad`'s properties directly if you need them for comparisons, etc. The format is as follows:
+```
+[mm/dd/yyyy @ hh:mm] TITLE
+URL
+* property1: value1
+* property2: value2
+...
+* propertyN: valueN
+```
+The date, title, and properties will be absent if the ad has not been scraped (`isScraped() == false`) unless they were manually specified when the object was constructed.
+
+###### Example usage
+```js
+const kijiji = require("kijiji-scraper");
+
+let ad = kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
+    if (!err) {
+        console.log(ad.toString());
+    }
+});
+```
+
 ---
-#### query(prefs, params, callback)
-Will call `callback` with an array of detailed ad objects.
+### Searching for ads
+
+Searches can be performed by using the `search()` function:
+
+#### search(params, callback, options)
+
 ##### Arguments
-* `prefs` - Contains Kijiji ad search category and location:
-```js
-{
-    "locationId": <Kijiji location id>,
-    "categoryId": <Kijiji ad category id>,
-    "scrapeInnerAd": true/false (default true)
-}
-```
+* `params` - Object containing Kijiji ad search parameters.
+    * **Mandatory parameters:**
 
-Values for `locationId` and `categoryId` can be found by performing a search and looking at the POST request parameters or the URL Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
+        |Parameter   |Type   |Description                                                                   |
+        |------------|-------|------------------------------------------------------------------------------|
+        |`locationId`|Integer|Id of the geographical location to search                                     |
+        |`categoryId`|Integer|Id of the ad category to search                                               |
 
-By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set the `scrapeInnerAd` preference to `false`.
+        Values for `locationId` and `categoryId` can be found by performing a search on the Kijiji website and looking at the URL that Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
 
-* `params` - Contains Kijiji ad search criteria:
-```js
-{
-    "minPrice": 0,
-    "maxPrice": 100,
-    "keywords": "keyword string with words separated by a '+'",
-    "adType": "OFFER"
-}
-```
+    * **Optional parameters:**
+        Most of these are specific to the category of ads being searched for. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
 
-There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on Kijiji.
+        There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring capabilities to examine the request for `b-search.html`. The parameters used in the query string for this request are able to be specified in `params`. A few examples include:
 
-* `callback(err, ads)` - A callback called after Kijiji has been searched. If there is an error, `err` will not be null. If everything was successful, `ads` will contain detailed ad objects. These are different from the ad objects returned by `scrape()`, since this function uses Kijiji's RSS functionality. They contain a key/value mapping for every field inside an ad's `<item>` tag in the RSS feed plus an `innerAd` property. This property will contain an object identical to the ad object returned by `scrape()` unless `scrapeInnerAd` was given as `false`, in which case the property will contain an empty object. These more detailed ads are of the form
-```js
-{
-    "title": "ad title",
-    "link": "ad URL",
-    "description": "ad description",
-    "pubDate": "date ad was published",
-    "guid": "ad URL",
-    "dc:date": "date ad was published",
-    "innerAd": [regular ad object]
-}
-```
+        |Parameter   |Type  |Description                                                                   |
+        |------------|------|------------------------------------------------------------------------------|
+        |`keywords`  |String|Search string, with words separated by a '+'                                  |
+        |`minPrice`  |Number|Minimum price of returned items                                               |
+        |`maxPrice`  |Number|Maximum price of returned items                                               |
+        |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
+
+* `callback(err, results)` - A callback called after the search results have been scraped. If there is an error, `err` will not be null. If everything was successful, `results` will contain an array of `Ad` objects.
+
+* `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
+
+    |Option               |Type   |Default Value|Description|
+    |---------------------|-------|-------------|-----------|
+    |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this.|
+    |`minResults`         |Integer|`20`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 20 ads, so if you set this to something like 29, up to 40 results may be retrieved.|
+    |`maxResults`         |Integer|`-1`         |Maximum number of ads to return via the callback function. This simply removes excess results from the array that is returnd (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A value of -1 indicates no limit.|
 
 ##### Example usage
 ```js
-var kijiji = require("kijiji-scraper");
+const kijiji = require("kijiji-scraper");
 
-kijiji.query(prefs, params, function(err, ads) {
-    //Use the ads array
-});
-```
----
-#### parse(ad)
-Will return a string representation of an ad object.
-##### Arguments
-* `ad` - Either an ad object returned by `scrape()` or a detailed ad object from the array returned by `query()`.
+let options = {
+    minResults: 40
+};
 
-##### Example usage
-```js
-var kijiji = require("kijiji-scraper");
+let params = {
+    locationId: 1700185,
+    categoryId: 27
+};
 
-kijiji.scrape("<Kijiji ad URL>", function(err, ad) {
-    console.log(kijiji.parse(ad)); //Converts ad to string
-});
+function callback(err, ads) {
+    if (!err) {
+        // Use the ads array
+        for (let i = 0; i < ads.length; ++i) {
+            console.log(ads[i].title);
+        }
+    }
+}
+
+kijiji.search(params, callback, options);
 ```
