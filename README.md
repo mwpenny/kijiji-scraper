@@ -151,15 +151,20 @@ Searches can be performed by using the `search()` function:
 * `params` - Object containing Kijiji ad search parameters.
     * **Mandatory parameters:**
 
-        |Parameter   |Type   |Description                                                                   |
-        |------------|-------|------------------------------------------------------------------------------|
-        |`locationId`|Integer|Id of the geographical location to search                                     |
-        |`categoryId`|Integer|Id of the ad category to search                                               |
+        |Parameter   |Type          |Default Value       |Description                                                     |
+        |------------|--------------|--------------------|----------------------------------------------------------------|
+        |`locationId`|Integer/Object|`0` (all of Canada) |Id of the geographical location to search                       |
+        |`categoryId`|Integer/Object|`0` (all categories)|Id of the ad category to search                                 |
 
-        Values for `locationId` and `categoryId` can be found by performing a search on the Kijiji website and looking at the URL that Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
+        Values for `locationId` and `categoryId` can be found by performing a search on the Kijiji website and examining the URL that Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
+
+        ###### Location and category objects
+        For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.js` and `categories.js`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
+
+        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and locationIds/categoryIds are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects.
 
     * **Optional parameters:**
-        Most of these are specific to the category of ads being searched for. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
+        Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
 
         There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring capabilities to examine the request for `b-search.html`. The parameters used in the query string for this request are able to be specified in `params`. A few examples include:
 
@@ -189,8 +194,8 @@ let options = {
 };
 
 let params = {
-    locationId: 1700185,
-    categoryId: 27
+    locationId: 1700185,  // Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
+    categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
 };
 
 function callback(err, ads) {
