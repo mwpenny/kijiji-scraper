@@ -70,14 +70,14 @@ kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
 });
 ```
 
-##### `Ad.Ad(url[, info, scraped])`
+##### `Ad(url[, info, scraped])`
 
 `Ad` constructor. Manually constructs an ad object. You should generally not need to use this save for a few special cases (e.g., storing ad URLs entered by a user for delayed scraping). `Ad.isScraped()` returns false for `Ad` objects constructed in this way unless `scraped` is passed as `true` or they are subsequently scraped by calling `Ad.scrape()`, which causes the scraper to replace the ad's information with what is found at its URL.
 
 ###### Arguments
 
 * `url` - Ad's URL
-* `info` (optional) - Object containing the ad's properties. Only keys in the properties table (above) may be specified. May be omitted (if not specified then `images` will be the empty array, `attributes` will be an empty object, and all other properties will be null)
+* `info` (optional) - Object containing the ad's properties. Only keys in the properties table (above) may be specified. May be omitted (if not specified then `images` will be an empty array, `attributes` will be an empty object, and all other properties will be null)
 * `scraped` (optional) - If `true`, causes `Ad.IsScraped()` to return `true` regardless of whether or not `Ad.scrape()` has been called
 
 ###### Example usage
@@ -152,9 +152,9 @@ ad.scrape(function(err) {
 
 ##### `Ad.toString()`
 
-Returns a string representation of the ad. This is just meant to be a summary and may omit information for brevity or change in the future. Access the `Ad`'s properties directly if you need them for comparisons, etc. The format is as follows:
+Returns a string representation of the ad. This is just meant to be a summary and may omit information for brevity or change format in the future. Access the `Ad`'s properties directly if you need them for comparisons, etc. The current format is as follows:
 ```
-[mm/dd/yyyy @ hh:mm] TITLE
+[MM/dd/yyyy @ hh:mm] TITLE
 URL
 * property1: value1
 * property2: value2
@@ -167,11 +167,9 @@ The date, title, and properties will be absent if the ad has not been scraped (`
 ```js
 const kijiji = require("kijiji-scraper");
 
-let ad = kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
-    if (!err) {
-        console.log(ad.toString());
-    }
-});
+kijiji.Ad.Get("<Kijiji ad URL>").then(function(ad) {
+    console.log(ad.toString());
+}).catch(console.error);
 ```
 
 ---
@@ -187,20 +185,20 @@ Searches are performed using the `search()` function:
 
         |Parameter   |Type          |Default Value       |Description                                                     |
         |------------|--------------|--------------------|----------------------------------------------------------------|
-        |`locationId`|Integer/Object|`0` (all of Canada) |Id of the geographical location to search                       |
-        |`categoryId`|Integer/Object|`0` (all categories)|Id of the ad category to search                                 |
+        |`locationId`|Integer/Object|`0` (all of Canada) |Id of the geographical location to search in                       |
+        |`categoryId`|Integer/Object|`0` (all categories)|Id of the ad category to search in                                 |
 
         Values for `locationId` and `categoryId` can be found by performing a search on the Kijiji website and examining the URL that Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
 
         ###### Location and category objects
         For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.js` and `categories.js`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
 
-        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and locationIds/categoryIds are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects.
+        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects.
 
     * **Optional parameters:**
-        Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
+        There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
 
-        There are many different search parameters, most of which vary by category type. They can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring capabilities to examine the request for `b-search.html`. The parameters used in the query string for this request are able to be specified in `params`. A few examples include:
+        Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
         |Parameter   |Type  |Description                                                                   |
         |------------|------|------------------------------------------------------------------------------|
@@ -213,9 +211,9 @@ Searches are performed using the `search()` function:
 
     |Option               |Type   |Default Value|Description|
     |---------------------|-------|-------------|-----------|
-    |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this.|
+    |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this and `Ad.isScraped()` will return `false` until `Ad.scrape()` is called to retrieve the missing information.|
     |`minResults`         |Integer|`20`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 20 ads, so if you set this to something like 29, up to 40 results may be retrieved.|
-    |`maxResults`         |Integer|`-1`         |Maximum number of ads to return via the callback function. This simply removes excess results from the array that is returnd (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A value of -1 indicates no limit.|
+    |`maxResults`         |Integer|`-1`         |Maximum number of ads to return. This simply removes excess results from the array that is returned (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A negative value indicates no limit.|
 
 * `callback(err, results)` (optional) - A callback called after the search results have been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `results` will contain an array of `Ad` objects.
 
@@ -234,6 +232,7 @@ let options = {
 let params = {
     locationId: 1700185,  // Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
     categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
+    sortByName: "priceAsc"  // Show the cheapest listings first
 };
 
 // Scrape using returned promise
