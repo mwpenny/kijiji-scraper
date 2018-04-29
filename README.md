@@ -34,22 +34,34 @@ This class encapsulates a Kijiji ad and its properties. It also handles retrievi
 
 The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024.
 
-**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to false. See the `Ad.isScraped()` and `Ad.scrape()` methods below for more information on this.
+**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the `Ad.isScraped()` and `Ad.scrape()` method documentation below for more information on this.
 
 #### Methods
 
-##### `Ad.Get(url, callback)`
+##### `Ad.Get(url[, callback])`
 
-Will scrape the Kijiji ad at `url` and call `callback` with an object containing its information.
+Will scrape the Kijiji ad at `url` and construct an `Ad` object containing its information.
 
 ###### Arguments
-* `url` - A Kijiji ad URL.
-* `callback(err, ad)` - A callback called after the ad has been scraped. If there is an error, `err` will not be null. If everything was successful, `ad` will contain an `Ad` object.
+
+* `url` - A Kijiji ad URL
+* `callback(err, ad)` (optional) - A callback called after the ad has been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `ad` will contain an `Ad` object
+
+###### Return value
+
+Returns a `Promise` which resolves to an `Ad` object containing the ad's information.
 
 ###### Example usage
 ```js
 const kijiji = require("kijiji-scraper");
 
+// Scrape using returned promise
+kijiji.Ad.Get("<Kijiji ad URL>").then(function(ad) {
+    // Use the ad object
+    console.log(ad.title);
+}).catch(console.error);
+
+// Scrape using optional callback paramater
 kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
     if (!err) {
         // Use the ad object
@@ -58,13 +70,15 @@ kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
 });
 ```
 
-##### `Ad.Ad(url, info)`
+##### `Ad.Ad(url[, info, scraped])`
 
-`Ad` constructor. Manually constructs an ad object. You should generally not need to use this save for a few special cases (e.g., storing ad URLs entered by a user for delayed scraping). `Ad.isScraped()` returns false for `Ad` objects constructed in this way until they are scraped by calling `Ad.scrape()`, which causes the scraper to replace the ad's information with what is found at its URL.
+`Ad` constructor. Manually constructs an ad object. You should generally not need to use this save for a few special cases (e.g., storing ad URLs entered by a user for delayed scraping). `Ad.isScraped()` returns false for `Ad` objects constructed in this way unless `scraped` is passed as `true` or they are subsequently scraped by calling `Ad.scrape()`, which causes the scraper to replace the ad's information with what is found at its URL.
 
 ###### Arguments
-* `url` - Ad's url.
-* `info` (optional) - Object containing the ad's properties. Only keys in the properties table (above) may be specified. May be omitted (if not specified then `images` will be the empty array, `attributes` will be an empty object, and all other properties will be null).
+
+* `url` - Ad's URL
+* `info` (optional) - Object containing the ad's properties. Only keys in the properties table (above) may be specified. May be omitted (if not specified then `images` will be the empty array, `attributes` will be an empty object, and all other properties will be null)
+* `scraped` (optional) - If `true`, causes `Ad.IsScraped()` to return `true` regardless of whether or not `Ad.scrape()` has been called
 
 ###### Example usage
 ```js
@@ -74,15 +88,17 @@ let ad = kijiji.Ad("<Kijiji ad URL>", { date: new Date() });
 console.log(ad.isScraped()); // false
 console.log(ad.date); // current date
 
-ad.scrape(function(err) {
-    if (!err) {
-        // Use the ad object
-        console.log(ad.date); // date ad was posted
-    }
-});
+ad.scrape().then(function() {
+    // Use the ad object
+    console.log(ad.date); // date ad was posted (initial value is overwritten)
+}).catch(console.error);
 ```
 
 ##### `Ad.isScraped()`
+
+Determines whether or not the ad's information has been retrieved from Kijiji.
+
+###### Return value
 
 Returns a boolean indicating whether or not an ad's information has been scraped from the page at its URL. This can be false if the `Ad` object was manually created using the constructor or if it was retrieved from a search with the `scrapeResultDetails` option set to false. Call `Ad.scrape()` to retrieve the information for such ads.
 
@@ -92,13 +108,23 @@ const kijiji = require("kijiji-scraper");
 
 let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
 console.log(ad.isScraped()); // false
+
+ad.scrape().then(function() {
+    console.log(ad.isScraped()); // true
+}).catch(console.error);
 ```
 
-##### `Ad.scrape(callback)`
+##### `Ad.scrape([callback])`
 
 Manually retrieves an `Ad`'s information from its URL. Useful if it was created in a way that does not do this automatically, such as using the constructor or performing a search with the `scrapeResultDetails` option set to false.
 
-* `callback(err)` - A callback called after the ad has been scraped. If there is an error, `err` will not be null.
+###### Arguments
+
+* `callback(err)` (optional) - A callback called after the ad has been scraped. If an error occurs during scraping, `err` will not be null
+
+###### Return value
+
+Returns a `Promise` which resolves once the ad has been scraped and the object has been updated.
 
 ###### Example usage
 ```js
@@ -107,6 +133,14 @@ const kijiji = require("kijiji-scraper");
 let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
 console.log(ad.isScraped()); // false
 
+// Scrape using returned promise
+ad.scrape().then(function() {
+    // Use the ad object
+    console.log(ad.isScraped()); // true
+    console.log(ad.title);
+}).catch(console.error);
+
+// Scrape using optional callback paramater
 ad.scrape(function(err) {
     if (!err) {
         // Use the ad object
@@ -143,9 +177,9 @@ let ad = kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
 ---
 ### Searching for ads
 
-Searches can be performed by using the `search()` function:
+Searches are performed using the `search()` function:
 
-#### search(params, callback, options)
+#### search(params[, options, callback])
 
 ##### Arguments
 * `params` - Object containing Kijiji ad search parameters.
@@ -175,8 +209,6 @@ Searches can be performed by using the `search()` function:
         |`maxPrice`  |Number|Maximum price of returned items                                               |
         |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
 
-* `callback(err, results)` - A callback called after the search results have been scraped. If there is an error, `err` will not be null. If everything was successful, `results` will contain an array of `Ad` objects.
-
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
 
     |Option               |Type   |Default Value|Description|
@@ -184,6 +216,12 @@ Searches can be performed by using the `search()` function:
     |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this.|
     |`minResults`         |Integer|`20`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 20 ads, so if you set this to something like 29, up to 40 results may be retrieved.|
     |`maxResults`         |Integer|`-1`         |Maximum number of ads to return via the callback function. This simply removes excess results from the array that is returnd (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A value of -1 indicates no limit.|
+
+* `callback(err, results)` (optional) - A callback called after the search results have been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `results` will contain an array of `Ad` objects.
+
+###### Return value
+
+Returns a `Promise` which resolves to an array of search result `Ad` objects.
 
 ##### Example usage
 ```js
@@ -198,6 +236,15 @@ let params = {
     categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
 };
 
+// Scrape using returned promise
+kijiji.search(params, options).then(function(ads) {
+    // Use the ads array
+    for (let i = 0; i < ads.length; ++i) {
+        console.log(ads[i].title);
+    }
+}).catch(console.error);
+
+// Scrape using optional callback parameter
 function callback(err, ads) {
     if (!err) {
         // Use the ads array
@@ -206,6 +253,5 @@ function callback(err, ads) {
         }
     }
 }
-
-kijiji.search(params, callback, options);
+kijiji.search(params, options, callback);
 ```
