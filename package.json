@@ -1,11 +1,11 @@
 {
   "name": "kijiji-scraper",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "description": "A scraper for Kijiji ads",
   "main": "index.js",
   "dependencies": {
     "cheerio": "~0.19.0",
-    "request": "~2.58.0"
+    "node-fetch": "~2.2.0"
   },
   "devDependencies": {},
   "scripts": {},
