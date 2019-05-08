@@ -226,7 +226,7 @@ Returns a `Promise` which resolves to an array of search result `Ad` objects.
 const kijiji = require("kijiji-scraper");
 
 let options = {
-    minResults: 40
+    minResults: 40 // Use only multiples of 20 as Kijiji renders pages in units of 20 listings per page
 };
 
 let params = {
