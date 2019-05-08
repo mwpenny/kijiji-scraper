@@ -205,6 +205,10 @@ Searches are performed using the `search()` function:
         |`keywords`  |String|Search string, with words separated by a '+'                                  |
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
+        |`address`   |String|Postal code of the location to filter search (in double quotes)                                 |
+        |`radius`    |Number|Maximum search radius (in kms) of returned items #Note: Avoid white or blank spaces as some parameters of search does not work well with spaces. Will be handled in the library with a fix soon (Issue # - TBD) |
+        |`adType`    |String|The Offer Types (Choices: "OFFER", "WANTED"). By default, the Offer Type is any i.e. both Offering and Wanted Ads will be returned |
+        |`minNumberOfImages` |Number|Minimum number of images. Set it to 1, to avoid returning Ads without Images as shown on Kijiji.ca |
         |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
 
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
@@ -230,9 +234,14 @@ let options = {
 };
 
 let params = {
-    locationId: 1700185,  // Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
-    categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
-    sortByName: "priceAsc"  // Show the cheapest listings first
+    locationId: 1700185,  // REQUIRED. Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
+    categoryId: 27,  // REQUIRED. Same as kijiji.categories.CARS_AND_VEHICLES
+    sortByName: "priceAsc",  // OPTIONAL. Show the cheapest listings first. Default is "dateDesc" i.e. Latest Ads First.
+    maxPrice: 750, // OPTIONAL. Max price is $750 in this example
+    address: "M5R1M3", // OPTIONAL. Postal code (Use without whitespaces)
+    radius: 10, // OPTIONAL. Max distance from address to consider as filter while retrieving ads    
+    adType: "OFFER", // OPTIONAL. Offer Type as provided on Kijiji.ca (Choices are: OFFER and WANTED). By default, it is any i.e. both OFFER and WANTED
+    minNumberOfImages: 1 // OPTIONAL. Set it to 1 to avoid returning Ads without Images as shown on Kijiji.ca
 };
 
 // Scrape using returned promise
