@@ -198,7 +198,7 @@ Searches are performed using the `search()` function:
     * **Optional parameters:**
         There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
 
-        Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
+        Parameters can be found by using your browser's developer tools on `https://www.kijiji.ca/b-search.html` and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html` or visible in the rendered HTML under the `<form>` tag with the search string `formSubmit`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
         |Parameter   |Type  |Description                                                                   |
         |------------|------|------------------------------------------------------------------------------|
