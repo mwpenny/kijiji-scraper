@@ -206,7 +206,7 @@ Searches are performed using the `search()` function:
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
         |`address`   |String|Postal code of the location to filter search (Use with double quotes)         |
-        |`radius`    |Number|Maximum search radius (in kms) of returned items #Note: Avoid white or blank spaces as some parameters of search does not work well with spaces. Will be handled in the library with a fix soon (Issue # - TBD) |
+        |`radius`    |Number|Maximum search radius (in kms) of returned items **Note: Avoid white or blank spaces as some parameters of search does not work well with spaces. Will be handled in the library with a fix soon (Issue # - TBD)** |
         |`adType`    |String|The Offer Types (Choices: `"OFFER"`, `"WANTED"` - Use with double quotes). By default, the Offer Type is any i.e. both Offering and Wanted Ads will be returned |
         |`hasImages` |Boolean|Return Ads with Images. Set it to `true`, to avoid returning Ads without Images as shown on Kijiji.ca |
         |`urgentOnly` |Boolean|Return Featured Ads only. Set it to `true`, to avoid returning All Ads as shown on Kijiji.ca. Default is All Ads |
