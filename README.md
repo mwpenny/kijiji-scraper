@@ -205,11 +205,14 @@ Searches are performed using the `search()` function:
         |`keywords`  |String|Search string, with words separated by a '+'                                  |
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
-        |`address`   |String|Postal code of the location to filter search (in double quotes)                                 |
+        |`address`   |String|Postal code of the location to filter search (Use with double quotes)         |
         |`radius`    |Number|Maximum search radius (in kms) of returned items #Note: Avoid white or blank spaces as some parameters of search does not work well with spaces. Will be handled in the library with a fix soon (Issue # - TBD) |
-        |`adType`    |String|The Offer Types (Choices: "OFFER", "WANTED"). By default, the Offer Type is any i.e. both Offering and Wanted Ads will be returned |
-        |`minNumberOfImages` |Number|Minimum number of images. Set it to 1, to avoid returning Ads without Images as shown on Kijiji.ca |
+        |`adType`    |String|The Offer Types (Choices: "OFFER", "WANTED" - Use with double quotes). By default, the Offer Type is any i.e. both Offering and Wanted Ads will be returned |
+        |`hasImages` |Boolean|Return Ads with Images. Set it to true, to avoid returning Ads without Images as shown on Kijiji.ca |
+        |`urgentOnly` |Boolean|Return Featured Ads only. Set it to true, to avoid returning All Ads as shown on Kijiji.ca. Default is All Ads |
         |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
+        |`"attributeMap[furnished_s]"`|Object|Default is Any. Explicitly set it to `[1]` to return furnished listings when searching for apartments|
+        |`"attributeMap[petsallowed_s]"`|Object|Default is Any. Explicitly set it to `[1]` to exclude pet-unfriendly landlords when searching for apartments|
 
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
 
@@ -240,8 +243,11 @@ let params = {
     maxPrice: 750, // OPTIONAL. Max price is $750 in this example
     address: "M5R1M3", // OPTIONAL. Postal code (Use without whitespaces)
     radius: 10, // OPTIONAL. Max distance from address to consider as filter while retrieving ads    
-    adType: "OFFER", // OPTIONAL. Offer Type as provided on Kijiji.ca (Choices are: OFFER and WANTED). By default, it is any i.e. both OFFER and WANTED
-    minNumberOfImages: 1 // OPTIONAL. Set it to 1 to avoid returning Ads without Images as shown on Kijiji.ca
+    adType: "OFFER", // OPTIONAL. Offer Type as provided on Kijiji.ca (Choices are: OFFER and WANTED). By default, it is any i.e. both OFFER and WANTED    
+    hasImages: true, // OPTIONAL. Set it to 1 to avoid returning Ads without Images as shown on Kijiji.ca
+    "attributeMap[furnished_s]": "[1]", // OPTIONAL. Used when looking for apartments. By default, it is any i.e. No preference.
+    "attributeMap[petsallowed_s]": "[1]", // OPTIONAL. Used when looking for apartments. By default, it is any i.e. No preference.
+    urgentOnly: true // OPTIONAL. Used to request featured or paid listings only. By default, it is All Ads.
 };
 
 // Scrape using returned promise
