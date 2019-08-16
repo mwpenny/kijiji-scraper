@@ -196,15 +196,14 @@ Searches are performed using the `search()` function:
         For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects.
 
     * **Optional parameters:**
-        There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
-
-        Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
+        There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
         |Parameter   |Type  |Description                                                                   |
         |------------|------|------------------------------------------------------------------------------|
         |`keywords`  |String|Search string, with words separated by a '+'                                  |
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
+        |`adType`    |String|Type of add ("OFFER", "WANTED", or undefined - for both)                      |
         |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
 
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
