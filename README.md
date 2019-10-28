@@ -193,19 +193,26 @@ Searches are performed using the `search()` function:
         ###### Location and category objects
         For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.js` and `categories.js`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
 
-        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects.
+        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See [locations.js](https://github.com/mwpenny/kijiji-scraper/blob/master/lib/locations.js) and [categories.js](https://github.com/mwpenny/kijiji-scraper/blob/master/lib/categories.js) for all location and category objects.
 
     * **Optional parameters:**
         There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. For example, set `params["attributeMap[petsallowed_s]"] = "[1]"` to exclude pet-unfriendly landlords when searching for apartments.
 
-        Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
+        Parameters can be found by using your browser's developer tools on `https://www.kijiji.ca/b-search.html` and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. You could also find some hidden info in the rendered HTML under the `<form>` tag with the search string `formSubmit`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
         |Parameter   |Type  |Description                                                                   |
         |------------|------|------------------------------------------------------------------------------|
         |`keywords`  |String|Search string, with words separated by a '+'                                  |
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
-        |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
+        |`address`   |String|Postal code of the location to filter search (Use with double quotes)         |
+        |`radius`    |Number|Maximum search radius (in kms) of returned items **Note: Avoid white or blank spaces as some parameters of search does not work well with spaces. Will be handled in the library with a fix soon (Issue # - TBD)** |
+        |`adType`    |String|The Offer Types (Choices: `"OFFER"`, `"WANTED"` - Use with double quotes). By default, the Offer Type is any i.e. both Offering and Wanted Ads will be returned |
+        |`hasImages` |Boolean|Return Ads with Images. Set it to `true`, to avoid returning Ads without Images as shown on Kijiji.ca |
+        |`urgentOnly` |Boolean|Return Featured Ads only. Set it to `true`, to avoid returning All Ads as shown on Kijiji.ca. Default is All Ads |
+        |`sortByName`|String|Search results ordering (e.g., `"dateDesc"`, `"dateAsc"`, `"priceDesc"`, `"priceAsc"`)|
+        |`"attributeMap[furnished_s]"`|Object|Default is Any. Explicitly set it to `[1]` to return furnished listings when searching for apartments|
+        |`"attributeMap[petsallowed_s]"`|Object|Default is Any. Explicitly set it to `[1]` to exclude pet-unfriendly landlords when searching for apartments|
 
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
 
@@ -230,9 +237,17 @@ let options = {
 };
 
 let params = {
-    locationId: 1700185,  // Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
-    categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
-    sortByName: "priceAsc"  // Show the cheapest listings first
+    locationId: 1700185,  // REQUIRED. Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
+    categoryId: 27,  // REQUIRED. Same as kijiji.categories.CARS_AND_VEHICLES
+    sortByName: "priceAsc",  // OPTIONAL. Show the cheapest listings first. Default is "dateDesc" i.e. Latest Ads First.
+    maxPrice: 750, // OPTIONAL. Max price is $750 in this example
+    address: "M5R1M3", // OPTIONAL. Postal code (Use without whitespaces)
+    radius: 10, // OPTIONAL. Max distance from address to consider as filter while retrieving ads    
+    adType: "OFFER", // OPTIONAL. Offer Type as provided on Kijiji.ca (Choices are: OFFER and WANTED). By default, it is any i.e. both OFFER and WANTED    
+    hasImages: true, // OPTIONAL. Set it to 1 to avoid returning Ads without Images as shown on Kijiji.ca
+    "attributeMap[furnished_s]": "[1]", // OPTIONAL. Used when looking for apartments. By default, it is any i.e. No preference.
+    "attributeMap[petsallowed_s]": "[1]", // OPTIONAL. Used when looking for apartments. By default, it is any i.e. No preference.
+    urgentOnly: true // OPTIONAL. Used to request featured or paid listings only. By default, it is All Ads.
 };
 
 // Scrape using returned promise
