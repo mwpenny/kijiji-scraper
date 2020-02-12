@@ -8,11 +8,11 @@
     "node-fetch": "~2.2.0"
   },
   "devDependencies": {
-    "@types/jest": "^25.1.2",
-    "jest": "^25.1.0"
+    "jest": "^23.6.0"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest ./tests/unitTests.spec.js",
+    "test-integration": "jest ./tests/integrationTests.spec.js"
   },
   "repository": {
     "type": "git",
