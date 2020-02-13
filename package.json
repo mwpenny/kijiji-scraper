@@ -7,8 +7,13 @@
     "cheerio": "^0.22.0",
     "node-fetch": "~2.2.0"
   },
-  "devDependencies": {},
-  "scripts": {},
+  "devDependencies": {
+    "jest": "^23.6.0"
+  },
+  "scripts": {
+    "test": "jest ./tests/unitTests.spec.js",
+    "test-integration": "jest ./tests/integrationTests.spec.js"
+  },
   "repository": {
     "type": "git",
     "url": "git://github.com/mwpenny/kijiji-scraper.git"

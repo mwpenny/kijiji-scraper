@@ -1,4 +1,8 @@
+# IDE
+.idea
+
 node_modules
 npm-debug.log
 build/
 test.js
+tests/
