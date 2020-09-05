@@ -1,8 +1,8 @@
-# IDE
-.idea
-
-node_modules
-npm-debug.log
+.vscode/
+apk/
 build/
-test.js
+docs/
+node_modules/
 tests/
+test-scripts/
+npm-debug.log
