@@ -3,6 +3,7 @@
   "version": "5.0.9",
   "description": "A scraper for Kijiji ads",
   "main": "index.js",
+  "types": "index.d.ts",
   "dependencies": {
     "cheerio": "^0.22.0",
     "node-fetch": "~2.6.1"
