@@ -32,7 +32,7 @@ This class encapsulates a Kijiji ad and its properties. It also handles retrievi
 |`attributes`  |Object  |Properties specific to the category of the scraped ad|
 |`url`         |String  |The ad's url                                         |
 
-The image URL given in `image` is the featured image for the ad and will be up to 300x300. The image URLs given in `images` are all of the images associated with the ad and each may be up to 1024x1024.
+The image URL given in `image` is the featured image for the ad. The image URLs given in `images` are all of the images associated with the ad.
 
 **Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the `Ad.isScraped()` and `Ad.scrape()` method documentation below for more information on this.
 
@@ -211,7 +211,7 @@ Searches are performed using the `search()` function:
     |Option               |Type   |Default Value|Description|
     |---------------------|-------|-------------|-----------|
     |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this and `Ad.isScraped()` will return `false` until `Ad.scrape()` is called to retrieve the missing information.|
-    |`minResults`         |Integer|`20`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 20 ads, so if you set this to something like 29, up to 40 results may be retrieved.|
+    |`minResults`         |Integer|`40`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 40 ads, so if you set this to something like 49, up to 80 results may be retrieved.|
     |`maxResults`         |Integer|`-1`         |Maximum number of ads to return. This simply removes excess results from the array that is returned (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A negative value indicates no limit.|
 
 * `callback(err, results)` (optional) - A callback called after the search results have been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `results` will contain an array of `Ad` objects.
