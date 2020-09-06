@@ -1,6 +1,7 @@
 .vscode/
 apk/
 build/
+coverage/
 docs/
 node_modules/
 tests/
