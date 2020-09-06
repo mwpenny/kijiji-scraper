@@ -19,7 +19,7 @@ declare module "kijiji-scraper" {
         date: Date;
 
         /**
-         * URL of the ads's primary (featured) image
+         * URL of the ad's primary (featured) image
          */
         image: string;
 
@@ -34,7 +34,7 @@ declare module "kijiji-scraper" {
         attributes: { [attributeName: string]: any };
 
         /**
-         * The ads URL
+         * The ad's URL
          */
         url: string;
     }
