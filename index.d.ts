@@ -80,7 +80,9 @@ declare module "kijiji-scraper" {
         scrape(callback?: ErrorCallback): Promise<void>;
 
         /**
-         * Convert the ad to a string
+         * Convert the ad to a string. This is just meant to be a summary and
+         * may omit information for brevity or change format in the future.
+         * Access the Ad's properties directly if you need them for comparisons.
          *
          * @returns A string representation of the ad
          */
