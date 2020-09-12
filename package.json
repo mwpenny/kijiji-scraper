@@ -1,6 +1,6 @@
 {
   "name": "kijiji-scraper",
-  "version": "5.0.8",
+  "version": "5.0.9",
   "description": "A scraper for Kijiji ads",
   "main": "index.js",
   "dependencies": {
