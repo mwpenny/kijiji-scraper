@@ -1,14 +1,26 @@
 jest.mock("node-fetch");
-jest.mock("../scraper")
 
-const cheerio = require("cheerio");
-const fetchSpy = require("node-fetch");
+import cheerio from "cheerio";
+import fetch from "node-fetch";
+import qs from "querystring";
+import search, { SearchParameters } from "../search";
+import * as scraper from "../scraper";
 
-const scraperSpy = require("../scraper");
-const search = require("../search");
+const fetchSpy = fetch as any as jest.Mock;
+const scraperSpy = jest.spyOn(scraper, "default");
 
-const defaultAdInfo = {
-    isFeatures: false,
+type ResultInfo = {
+    isFeatured: boolean;
+    isThirdParty: boolean;
+    title: string;
+    path: string;
+    description: string;
+    imageAttributes: string;
+    datePosted: string;
+};
+
+const defaultResultInfo: ResultInfo = {
+    isFeatured: false,
     isThirdParty: false,
     title: "",
     path: "",
@@ -18,8 +30,8 @@ const defaultAdInfo = {
 };
 
 // Result pages in most categories use this markup
-const createStandardResultHTML = (info) => {
-    info = { ...defaultAdInfo, ...info };
+const createStandardResultHTML = (info: Partial<ResultInfo>): string => {
+    info = { ...defaultResultInfo, ...info };
 
     return `
         <div class="search-item
@@ -53,8 +65,8 @@ const createStandardResultHTML = (info) => {
 
 // For some reason, some categories (like anything under
 // SERVICES) use different markup classes than usual
-const createServiceResultHTML = (info) => {
-    info = { ...defaultAdInfo, ...info };
+const createServiceResultHTML = (info: Partial<ResultInfo>): string => {
+    info = { ...defaultResultInfo, ...info };
 
     return `
         <table class="
@@ -92,26 +104,14 @@ describe.each`
         jest.resetAllMocks();
     });
 
-    const makeSearchUrl = (params) => {
-        let url = "https://www.kijiji.ca/b-search.html?";
-
-        const paramsForSearch = { ...params };
-        for (const [key, value] of Object.entries(paramsForSearch)) {
-            if (value === undefined) {
-                delete paramsForSearch[key];
-            }
-        }
-
-        Object.getOwnPropertyNames(paramsForSearch).forEach((key, i) => {
-            if (i > 0) {
-                url += "&";
-            }
-            url += `${key}=${paramsForSearch[key]}`;
-        });
-        return url;
+    const validateSearchUrl = (url: string, expectedParams: SearchParameters) => {
+        const splitUrl = url.split("?");
+        expect(splitUrl.length).toBe(2);
+        expect(splitUrl[0]).toBe("https://www.kijiji.ca/b-search.html")
+        expect(qs.parse(splitUrl[1])).toEqual(qs.parse(qs.stringify(expectedParams)));
     };
 
-    const defaultSearchParams = {
+    const defaultSearchParams: SearchParameters = {
         locationId: 0,
         categoryId: 0,
         formSubmit: true,
@@ -123,7 +123,9 @@ describe.each`
             fetchSpy.mockResolvedValueOnce({ text: () => "" });
 
             await search({});
-            expect(fetchSpy).toHaveBeenNthCalledWith(1, makeSearchUrl(defaultSearchParams));
+
+            expect(fetchSpy).toBeCalled();
+            validateSearchUrl(fetchSpy.mock.calls[0][0], defaultSearchParams);
         });
 
         describe.each`
@@ -155,10 +157,11 @@ describe.each`
 
                 await search({ [param]: (useObject ? { id: 123 } : 123) });
 
-                expect(fetchSpy).toHaveBeenNthCalledWith(1, makeSearchUrl({
+                expect(fetchSpy).toBeCalled();
+                validateSearchUrl(fetchSpy.mock.calls[0][0], {
                     ...defaultSearchParams,
                     [param]: 123
-                }));
+                });
             });
         });
 
@@ -174,7 +177,8 @@ describe.each`
 
             await search(params);
 
-            expect(fetchSpy).toHaveBeenNthCalledWith(1, makeSearchUrl(params));
+            expect(fetchSpy).toBeCalled();
+            validateSearchUrl(fetchSpy.mock.calls[0][0], params);
         });
     });
 
@@ -219,7 +223,7 @@ describe.each`
                 fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
                 fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "/myad" }) });
                 fetchSpy.mockResolvedValueOnce({ text: () => "" });
-                scraperSpy.mockResolvedValueOnce({ title: "My title" });
+                scraperSpy.mockResolvedValueOnce({ title: "My title" } as scraper.AdInfo);
 
                 const ads = await search({}, { scrapeResultDetails: value });
 
@@ -244,9 +248,11 @@ describe.each`
         });
 
         it.each`
-            test                     | value        | expectedRequestCount
-            ${"default value of 40"} | ${undefined} | ${40}
-            ${"explicitly set to 5"} | ${5}         | ${5}
+            test                      | value        | expectedRequestCount
+            ${"default value of 40"}  | ${undefined} | ${40}
+            ${"explicitly set to 5"}  | ${5}         | ${5}
+            ${"explicitly set to 0"}  | ${0}         | ${0}
+            ${"explicitly set to -1"} | ${-1}        | ${0}
         `("should stop scraping if minResults ads are found ($test)", async ({ value, expectedRequestCount }) => {
             fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
             fetchSpy.mockResolvedValue({ text: () => createResultHTML({}) });
@@ -305,8 +311,9 @@ describe.each`
 
             await search({}, { scrapeResultDetails: false });
 
-            expect(fetchSpy.mock.calls).toEqual([
-                [makeSearchUrl(defaultSearchParams)],
+            expect(fetchSpy).toBeCalledTimes(3);
+            validateSearchUrl(fetchSpy.mock.calls[0][0], defaultSearchParams);
+            expect(fetchSpy.mock.calls.slice(1)).toEqual([
                 ["http://example.com/search/page-1/results"],
                 ["http://example.com/search/page-2/results"]
             ]);
@@ -315,11 +322,11 @@ describe.each`
 
     describe("result page scraping", () => {
         // Helpers for date tests
-        const nanDataValidator = (date) => {
+        const nanDataValidator = (date: Date) => {
             expect(Number.isNaN(date.getTime())).toBe(true);
         };
-        const makeSpecificDateValidator = (month, day, year) => {
-            return (date) => {
+        const makeSpecificDateValidator = (month: number, day: number, year: number) => {
+            return (date: Date) => {
                 const d = new Date();
                 d.setMonth(month - 1);
                 d.setDate(day);
@@ -329,24 +336,24 @@ describe.each`
                 expect(date).toEqual(d);
             }
         };
-        const makeMinutesAgoValidator = (minutes) => {
-            return (date) => {
+        const makeMinutesAgoValidator = (minutes: number) => {
+            return (date: Date) => {
                 const minutesAgo = new Date();
                 minutesAgo.setMinutes(minutesAgo.getMinutes() - minutes, 0, 0);
 
                 expect(date).toEqual(minutesAgo);
             }
         };
-        const makeHoursAgoValidator = (hours) => {
-            return (date) => {
+        const makeHoursAgoValidator = (hours: number) => {
+            return (date: Date) => {
                 const hoursAgo = new Date();
                 hoursAgo.setHours(hoursAgo.getHours() - hours, 0, 0, 0);
 
                 expect(date).toEqual(hoursAgo);
             }
         };
-        const makeDaysAgoValidator = (days) => {
-            return (date) => {
+        const makeDaysAgoValidator = (days: number) => {
+            return (date: Date) => {
                 const daysAgo = new Date();
                 daysAgo.setDate(daysAgo.getDate() - days);
                 daysAgo.setHours(0, 0, 0, 0);
@@ -354,7 +361,7 @@ describe.each`
                 expect(date).toEqual(daysAgo);
             }
         };
-        const nowIshValidator = (date) => {
+        const nowIshValidator = (date: Date) => {
             const nowIsh = new Date();
             nowIsh.setSeconds(date.getSeconds());
             nowIsh.setMilliseconds(date.getMilliseconds());
@@ -480,14 +487,30 @@ describe.each`
             expect(fetchSpy).toBeCalledTimes(2);
         });
 
-        it("should call callback if specified", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ title: "My title" }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
+        describe("callback", () => {
+            it("should be called on success", async () => {
+                fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ title: "My title" }) });
+                fetchSpy.mockResolvedValueOnce({ text: () => "" });
 
-            const callback = jest.fn();
-            const ads = await search({}, { scrapeResultDetails: false }, callback);
+                const callback = jest.fn();
+                const ads = await search({}, { scrapeResultDetails: false }, callback);
 
-            expect(callback).toBeCalledWith(null, ads);
+                expect(callback).toBeCalledWith(null, ads);
+            });
+
+            it("should be called on error", async () => {
+                fetchSpy.mockImplementationOnce(() => { throw new Error("Bad fetch"); });
+
+                const callback = jest.fn();
+
+                try {
+                    await search({}, {}, callback);
+                    fail("Expected error");
+                } catch (error) {
+                    expect(error.message).toBe("Bad fetch");
+                    expect(callback).toBeCalledWith(expect.objectContaining({ message: "Bad fetch" }), []);
+                }
+            });
         });
     });
 });

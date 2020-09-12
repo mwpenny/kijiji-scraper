@@ -1,21 +1,22 @@
 jest.mock("node-fetch");
 
-const fetchSpy = require("node-fetch");
+import fetch from "node-fetch";
+import scraper from "../scraper";
 
-const scraper = require("../scraper");
+const fetchSpy = fetch as any as jest.Mock;
 
 describe("Ad HTML scraper", () => {
     afterEach(() => {
         jest.resetAllMocks();
     });
 
-    const mockResponse = (body) => {
+    const mockResponse = (body: string) => {
         fetchSpy.mockResolvedValue({
             text: () => body
         });
     };
 
-    const createAdHTML = (info) => {
+    const createAdHTML = (info: any) => {
         return `
             <html>
                 <body>
@@ -136,7 +137,13 @@ describe("Ad HTML scraper", () => {
                     adInfo: {},
                     VIP: {
                         media: [
+                            // Invalid
                             { type: "not-an-image", href: "http://example.org" },
+                            { type: "image", href: "" },
+                            { type: "image", href: 123 },
+                            { type: "image" },
+
+                            // Valid
                             { type: "image", href: "http://example.com/image" },
                             { type: "image", href: "http://example.com/images/$_12.JPG" },
                             { type: "image", href: "http://example.com/images/$_34.PNG" },
@@ -167,6 +174,15 @@ describe("Ad HTML scraper", () => {
                     adInfo: {},
                     VIP: {
                         adAttributes: [
+                            // Invalid
+                            {},
+                            { machineKey: 123 },
+                            { machineValue: 456 },
+                            { machineKey: 123, machineValue: 456 },
+                            { machineKey: "invalid", machineValue: 456 },
+                            { machineKey: 123, machineValue: "invalid" },
+
+                            // Valid
                             { machineKey: "myAttr", machineValue: value }
                         ]
                     }
@@ -200,9 +216,10 @@ describe("Ad HTML scraper", () => {
         });
 
         it.each`
-            test             | value              | expected
-            ${"no amount"}   | ${null}            | ${undefined}
-            ${"with amount"} | ${{ amount: 123 }} | ${1.23}
+            test                    | value                | expected
+            ${"no amount"}          | ${null}              | ${undefined}
+            ${"non-numeric amount"} | ${{ amount: "abc" }} | ${undefined}
+            ${"with amount"}        | ${{ amount: 123 }}   | ${1.23}
         `("should scrape price ($test)", async ({ value, expected }) => {
             mockResponse(createAdHTML({
                 config: {

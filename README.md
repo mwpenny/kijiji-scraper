@@ -16,7 +16,7 @@ A lightweight node.js module for retrieving and scraping ads from [Kijiji](http:
 
 ## Documentation
 
-**Quick start:** Use `Ad.Get()` to scrape an ad given its URL. Use `search()` to scrape many ads given a set of search parameters. Read on (or CTRL+F) for more detailed information.
+**Quick start:** Use `Ad.Get()` to scrape an ad given its URL. Use `search()` to scrape many ads given a set of search parameters. Read on (or CTRL+F) for more detailed information. Documentation can also be found in the TSDoc comments in this module's TypeScript type definition files (`.d.ts` files).
 
 ### `Ad` class
 This class encapsulates a Kijiji ad and its properties. It also handles retrieving this information from Kijiji.
@@ -84,11 +84,11 @@ kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
 ```js
 const kijiji = require("kijiji-scraper");
 
-let ad = kijiji.Ad("<Kijiji ad URL>", { date: new Date() });
+const ad = kijiji.Ad("<Kijiji ad URL>", { date: new Date() });
 console.log(ad.isScraped()); // false
 console.log(ad.date); // current date
 
-ad.scrape().then(function() {
+ad.scrape().then(() => {
     // Use the ad object
     console.log(ad.date); // date ad was posted (initial value is overwritten)
 }).catch(console.error);
@@ -106,10 +106,10 @@ Returns a boolean indicating whether or not an ad's information has been scraped
 ```js
 const kijiji = require("kijiji-scraper");
 
-let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
+const ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
 console.log(ad.isScraped()); // false
 
-ad.scrape().then(function() {
+ad.scrape().then(() => {
     console.log(ad.isScraped()); // true
 }).catch(console.error);
 ```
@@ -130,18 +130,18 @@ Returns a `Promise` which resolves once the ad has been scraped and the object h
 ```js
 const kijiji = require("kijiji-scraper");
 
-let ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
+const ad = kijiji.Ad("<Kijiji ad URL>");  // ad does not get scraped
 console.log(ad.isScraped()); // false
 
 // Scrape using returned promise
-ad.scrape().then(function() {
+ad.scrape().then(() => {
     // Use the ad object
     console.log(ad.isScraped()); // true
     console.log(ad.title);
 }).catch(console.error);
 
 // Scrape using optional callback paramater
-ad.scrape(function(err) {
+ad.scrape((err) => {
     if (!err) {
         // Use the ad object
         console.log(ad.isScraped()); // true
@@ -167,7 +167,7 @@ The date, title, and properties will be absent if the ad has not been scraped (`
 ```js
 const kijiji = require("kijiji-scraper");
 
-kijiji.Ad.Get("<Kijiji ad URL>").then(function(ad) {
+kijiji.Ad.Get("<Kijiji ad URL>").then(ad => {
     console.log(ad.toString());
 }).catch(console.error);
 ```
@@ -191,19 +191,19 @@ Searches are performed using the `search()` function:
         Values for `locationId` and `categoryId` can be found by performing a search on the Kijiji website and examining the URL that Kijiji redirects to. For example, after setting the location to Ottawa and selecting the "cars & vehicles" category, Kijiji redirects to http://www.kijiji.ca/b-cars-vehicles/ottawa/c27l1700185. The last part of the URL (c27l1700185) is formatted as c[categoryId]l[locationId]. So in this case, `categoryId` is 27 and `locationId` is 1700185.
 
         ###### Location and category objects
-        For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.js` and `categories.js`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
+        For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.ts` and `categories.ts`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
 
-        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.js` and `categories.js` for all location and category objects. The root objects themselves specify all locations and all categories, respectively (id of 0).
+        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). The root objects themselves specify all locations/categories (id of `0`). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.ts` and `categories.ts` for all location and category objects.
 
     * **Optional parameters:**
         There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
         |Parameter   |Type  |Description                                                                   |
         |------------|------|------------------------------------------------------------------------------|
-        |`keywords`  |String|Search string, with words separated by a '+'                                  |
+        |`keywords`  |String|Search string, with words separated                                           |
         |`minPrice`  |Number|Minimum price of returned items                                               |
         |`maxPrice`  |Number|Maximum price of returned items                                               |
-        |`adType`    |String|Type of add ("OFFER", "WANTED", or undefined - for both)                      |
+        |`adType`    |String|Type of ad ("OFFER", "WANTED", or undefined - for both)                       |
         |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
 
 * `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
@@ -224,18 +224,18 @@ Returns a `Promise` which resolves to an array of search result `Ad` objects.
 ```js
 const kijiji = require("kijiji-scraper");
 
-let options = {
+const options = {
     minResults: 40
 };
 
-let params = {
+const params = {
     locationId: 1700185,  // Same as kijiji.locations.ONTARIO.OTTAWA_GATINEAU_AREA.OTTAWA
     categoryId: 27,  // Same as kijiji.categories.CARS_AND_VEHICLES
     sortByName: "priceAsc"  // Show the cheapest listings first
 };
 
 // Scrape using returned promise
-kijiji.search(params, options).then(function(ads) {
+kijiji.search(params, options).then(ads => {
     // Use the ads array
     for (let i = 0; i < ads.length; ++i) {
         console.log(ads[i].title);

@@ -1,11 +1,18 @@
 module.exports = {
     collectCoverage: true,
     collectCoverageFrom: [
-        "lib/*.js"
+        "lib/*.ts"
+    ],
+    coveragePathIgnorePatterns: [
+        "categories.ts",
+        "locations.ts"
     ],
     testEnvironment: "node",
     testMatch: [
-        "**/test/**.spec.js"
+        "**/test/**.spec.ts"
     ],
+    transform: {
+        "^.+.ts$": "ts-jest"
+    },
     verbose: true
 }

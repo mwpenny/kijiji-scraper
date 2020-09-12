@@ -1,7 +1,9 @@
-// locations.js
-/* Geographical locations and their corresponding Kijiji locationId values */
+// locations.ts
 
-module.exports = {
+/**
+ * Geographical locations and their corresponding Kijiji locationId values
+ */
+export default {
     id: 0,
     ALBERTA: {
         id: 9003,

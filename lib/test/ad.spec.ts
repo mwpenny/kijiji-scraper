@@ -1,16 +1,16 @@
-jest.mock("../scraper");
-
-const scraperSpy = require("../scraper");
-const kijiji = jest.requireActual("../..");
+import Ad from "../ad";
+import * as scraper from "../scraper";
 
 describe("Kijiji Ad", () => {
-    const validateAdValues = (ad, expected) => {
+    const scraperSpy = jest.spyOn(scraper, "default");
+
+    const validateAdValues = (ad: Ad, expected: scraper.AdInfo) => {
         for (const [key, value] of Object.entries(expected)) {
             // Special checking for invalid dates since NaN != NaN
             if (value instanceof Date && Number.isNaN(value.getTime())) {
-                expect(Number.isNaN(ad[key].getTime())).toBe(true);
+                expect(Number.isNaN((ad as any)[key].getTime())).toBe(true);
             } else {
-                expect(ad[key]).toEqual(value);
+                expect((ad as any)[key]).toEqual(value);
             }
         }
     };
@@ -20,19 +20,12 @@ describe("Kijiji Ad", () => {
     });
 
     describe("initialization", () => {
-        const defaultValues = {
-            title: "",
-            description: "",
-            date: new Date(NaN),
-            image: "",
-            images: [],
-            attributes: {}
-        };
-
         it("should use default values when none are provided", () => {
-            const ad = new kijiji.Ad("http://example.com");
-            validateAdValues(ad, defaultValues);
-            expect(ad.url).toBe("http://example.com");
+            const ad = new Ad("http://example.com");
+            validateAdValues(ad, {
+                ...new scraper.AdInfo(),
+                url: "http://example.com"
+            });
             expect(ad.isScraped()).toBe(false);
         });
 
@@ -44,32 +37,45 @@ describe("Kijiji Ad", () => {
             ${"image"}        | ${"http://example.com/someimage"}
             ${"images"}       | ${["http://example.com/image1", "http://example.com/image2"]}
             ${"attributes"}   | ${{ key1: "val1", key2: 123 }}
+            ${"url"}          | ${"http://example.com/somepath"}
         `("should accept user-provided ad properties ($property=$value)", ({ property, value }) => {
-            const ad = new kijiji.Ad("http://example.com", { [property]: value });
+            const ad = new Ad("http://example.com", { [property]: value });
             validateAdValues(ad, {
-                ...defaultValues,
+                ...new scraper.AdInfo(),
+                url: "http://example.com",
                 [property]: value
             });
-            expect(ad.url).toBe("http://example.com");
             expect(ad.isScraped()).toBe(false);
         });
 
         it("should ignore invalid user-provided ad property", () => {
-            const ad = new kijiji.Ad("http://example.com", { invalid: 123 });
-            validateAdValues(ad, defaultValues);
-            expect(ad.url).toBe("http://example.com");
+            const ad = new Ad("http://example.com", { invalid: 123 } as any as scraper.AdInfo);
+            validateAdValues(ad, {
+                ...new scraper.AdInfo(),
+                url: "http://example.com"
+            });
             expect(ad.isScraped()).toBe(false);
         });
 
         it("should allow overriding the isScraped flag", () => {
-            const ad = new kijiji.Ad("http://example.com", {}, true);
+            const ad = new Ad("http://example.com", {}, true);
             expect(ad.isScraped()).toBe(true);
+        });
+
+        it("should not allow overriding isScraped function", () => {
+            const ad = new Ad("http://example.com", { isScraped: 123 } as any as scraper.AdInfo);
+            expect(ad.isScraped).toBeInstanceOf(Function);
+        });
+
+        it("should not allow overriding scrape function", () => {
+            const ad = new Ad("http://example.com", { scrape: 123 } as any as scraper.AdInfo);
+            expect(ad.scrape).toBeInstanceOf(Function);
         });
     });
 
     describe("string representation", () => {
         it("should only display URL if ad has no properties", () => {
-            const ad = new kijiji.Ad("http://example.com");
+            const ad = new Ad("http://example.com");
             expect(ad.toString()).toBe("http://example.com\r\n");
         });
 
@@ -82,17 +88,17 @@ describe("Kijiji Ad", () => {
             date.setHours(20);
             date.setMinutes(5);
 
-            const ad = new kijiji.Ad("http://example.com", { date });
+            const ad = new Ad("http://example.com", { date });
             expect(ad.toString()).toBe("[09/05/2020 @ 20:05] http://example.com\r\n");
         });
 
         it("should include title if present", () => {
-            const ad = new kijiji.Ad("http://example.com", { title: "My ad" });
+            const ad = new Ad("http://example.com", { title: "My ad" });
             expect(ad.toString()).toBe("My ad\r\nhttp://example.com\r\n");
         });
 
         it("should include attributes if present", () => {
-            const ad = new kijiji.Ad("http://example.com", {
+            const ad = new Ad("http://example.com", {
                 attributes: {
                     mileage: 125864,
                     bedrooms: 4
@@ -102,7 +108,7 @@ describe("Kijiji Ad", () => {
         });
 
         it("should handle malformed location attribute", () => {
-            const ad = new kijiji.Ad("http://example.com", {
+            const ad = new Ad("http://example.com", {
                 attributes: {
                     location: 7
                 }
@@ -111,7 +117,7 @@ describe("Kijiji Ad", () => {
         });
 
         it("should include correct location attribute if present", () => {
-            const ad = new kijiji.Ad("http://example.com", {
+            const ad = new Ad("http://example.com", {
                 attributes: {
                     location: { mapAddress: "123 Main Street" }
                 }
@@ -129,7 +135,7 @@ describe("Kijiji Ad", () => {
             const error = new Error("Bad response");
             scraperSpy.mockRejectedValue(error);
 
-            const ad = new kijiji.Ad("http://example.com");
+            const ad = new Ad("http://example.com");
             const callback = jest.fn();
             expect(ad.isScraped()).toBe(false);
 
@@ -154,19 +160,22 @@ describe("Kijiji Ad", () => {
             ${false}
         `("should update ad details on successful scrape (withCallback=$withCallback)", async ({ withCallback }) => {
             // Of course this could only ever exist as a fake ad :(
-            const mockAdInfo = {
+            const mockAdInfo: scraper.AdInfo = {
                 title: "Unlimited network requests",
                 description: "No IP bans at all!",
                 date: new Date(),
+                image: "main image",
+                images: ["dark room", "stock photo"],
                 attributes: {
                     type: "Offer",
                     price: "Free",
                     seller: "Kijiji"
-                }
+                },
+                url: "http://example.com"
             };
-            scraperSpy.mockResolvedValue(mockAdInfo);
+            scraperSpy.mockResolvedValue(mockAdInfo as scraper.AdInfo);
 
-            const ad = new kijiji.Ad("http://example.com");
+            const ad = new Ad("http://example.com");
             const callback = jest.fn();
             expect(ad.isScraped()).toBe(false);
 
@@ -192,14 +201,14 @@ describe("Kijiji Ad", () => {
             scraperSpy.mockRejectedValue(error);
 
             try {
-                await kijiji.Ad.Get("http://example.com", withCallback ? callback : undefined);
+                await Ad.Get("http://example.com", withCallback ? callback : undefined);
                 fail("Expected error on scrape");
             } catch (err) {
                 expect(err).toBe(error);
                 expect(scraperSpy).toBeCalledWith("http://example.com");
 
                 if (withCallback) {
-                    expect(callback).toBeCalledWith(error);
+                    expect(callback).toBeCalledWith(error, expect.any(Ad));
                 }
             }
         });
@@ -209,19 +218,22 @@ describe("Kijiji Ad", () => {
             ${true}
             ${false}
         `("should return ad on successful scrape (withCallback=$withCallback)", async ({ withCallback }) => {
-            const mockAdInfo = {
+            const mockAdInfo: scraper.AdInfo = {
                 title: "Looking for free stuff",
                 description: "You just need to bring it to me. I'm doing you a favor",
                 date: new Date(),
-                attributes: { type: "Wanted" }
+                image: "an image",
+                images: ["supplemental image"],
+                attributes: { type: "Wanted" },
+                url: "http://example.com"
             };
             const callback = jest.fn();
             scraperSpy.mockResolvedValue(mockAdInfo);
 
-            const ad = await kijiji.Ad.Get("http://example.com", withCallback ? callback : undefined);
+            const ad = await Ad.Get("http://example.com", withCallback ? callback : undefined);
             expect(scraperSpy).toBeCalledWith("http://example.com");
 
-            expect(ad).toBeInstanceOf(kijiji.Ad);
+            expect(ad).toBeInstanceOf(Ad);
             expect(ad.url).toBe("http://example.com");
             expect(ad.isScraped()).toBe(true);
             validateAdValues(ad, mockAdInfo);
