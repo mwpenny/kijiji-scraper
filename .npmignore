@@ -1,8 +1,1 @@
-.vscode/
-apk/
-build/
-docs/
-node_modules/
-tests/
-test-scripts/
-npm-debug.log
+*.spec.ts

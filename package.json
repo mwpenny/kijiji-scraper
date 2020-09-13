@@ -1,17 +1,30 @@
 {
   "name": "kijiji-scraper",
-  "version": "5.0.9",
+  "version": "5.1.0",
   "description": "A scraper for Kijiji ads",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
   "dependencies": {
     "cheerio": "^0.22.0",
-    "node-fetch": "~2.6.1"
+    "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "jest": "^23.6.0"
+    "@types/cheerio": "^0.22.21",
+    "@types/jest": "^26.0.13",
+    "@types/node-fetch": "^2.5.7",
+    "jest": "^26.4.0",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^26.3.0",
+    "typescript": "^4.0.2"
   },
   "scripts": {
-    "test": "jest ./tests/unitTests.spec.js",
+    "build": "tsc",
+    "clean": "rimraf dist",
+    "prepare": "npm run build",
+    "test": "jest --config jest.config.js",
     "test-integration": "jest ./tests/integrationTests.spec.js"
   },
   "repository": {

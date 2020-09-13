@@ -1,7 +1,9 @@
 .vscode/
 apk/
 build/
+coverage/
 docs/
+dist/
 node_modules/
 test-scripts/
 npm-debug.log

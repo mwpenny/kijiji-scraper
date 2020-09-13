@@ -1,7 +1,10 @@
-// categories.js
-/* Ad categories and their corresponding Kijiji categoryId values */
+// categories.ts
 
-module.exports = {
+/**
+ * Ad categories and their corresponding Kijiji categoryId values
+ */
+export default {
+    id: 0,
     KIJIJI_VILLAGE: { id: 36611001 },
     BUY_AND_SELL: {
         id: 10,
