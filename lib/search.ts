@@ -8,7 +8,7 @@ import fetch, { Response as FetchResponse } from "node-fetch";
 import KijijiAd from "./ad";
 import { AdInfo } from "./scraper";
 
-const packageJson = require("../package.json");
+const packageJson = require("../../package.json");
 
 const KIJIJI_BASE_URL = "https://www.kijiji.ca";
 const KIJIJI_SEARCH_URL = KIJIJI_BASE_URL + "/b-search.html";
