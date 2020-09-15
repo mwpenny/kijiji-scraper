@@ -34,17 +34,18 @@ This class encapsulates a Kijiji ad and its properties. It also handles retrievi
 
 The image URL given in `image` is the featured image for the ad. The image URLs given in `images` are all of the images associated with the ad.
 
-**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the `Ad.isScraped()` and `Ad.scrape()` method documentation below for more information on this.
+**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the [`Ad.isScraped()`](#adisscraped) and [`Ad.scrape()`](#adscrapeoptions-callback) method documentation below for more information on this.
 
 #### Methods
 
-##### `Ad.Get(url[, callback])`
+##### `Ad.Get(url[, options, callback])`
 
 Will scrape the Kijiji ad at `url` and construct an `Ad` object containing its information.
 
 ###### Arguments
 
 * `url` - A Kijiji ad URL
+* `options` (optional) - Options to pass to the scraper. See [Scraper Options](#scraper-options) for details
 * `callback(err, ad)` (optional) - A callback called after the ad has been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `ad` will contain an `Ad` object
 
 ###### Return value
@@ -114,12 +115,13 @@ ad.scrape().then(() => {
 }).catch(console.error);
 ```
 
-##### `Ad.scrape([callback])`
+##### `Ad.scrape([options, callback])`
 
 Manually retrieves an `Ad`'s information from its URL. Useful if it was created in a way that does not do this automatically, such as using the constructor or performing a search with the `scrapeResultDetails` option set to false.
 
 ###### Arguments
 
+* `options` (optional) - Options to pass to the scraper. See [Scraper Options](#scraper-options) for details
 * `callback(err)` (optional) - A callback called after the ad has been scraped. If an error occurs during scraping, `err` will not be null
 
 ###### Return value
@@ -193,25 +195,43 @@ Searches are performed using the `search()` function:
         ###### Location and category objects
         For convenience, objects containing all `locationId` and `categoryId` values Kijiji accepts have been defined in `locations.ts` and `categories.ts`, respectively. These objects are nested in the same way as those in the location and category selectors on the Kijiji website (e.g., the city of Montreal is located under "Quebec > Greater Montreal > City of Montreal"; coffee tables are located under "Buy and Sell > Furniture > Coffee Tables"), so their contents should be familiar.
 
-        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). The root objects themselves specify all locations/categories (id of `0`). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See `locations.ts` and `categories.ts` for all location and category objects.
+        For example, instead of setting `locationId` to `1700281` (Montreal) and `categoryId` to `241` (coffee tables), you can set `locationId` to `locations.QUEBEC.GREATER_MONTREAL.CITY_OF_MONTREAL` and `categoryId` to `categories.BUY_AND_SELL.FURNITURE.COFFEE_TABLES`. You no longer need to know the ids, and you have a quick reference available. Any location/category object along the hierarchy will also work (e.g., `locations.QUEBEC` for all of Quebec, not just Montreal; `categories.BUY_AND_SELL.FURNITURE` for all furniture, not just coffee tables). The root objects themselves specify all locations/categories (id of `0`). Location/category objects and `locationId`s/`categoryId`s are interchangeable - the search function will behave identically in either case. See [`locations.ts`](lib/locations.ts) and [`categories.ts`](lib/categories.ts) for all location and category objects.
 
     * **Optional parameters:**
-        There are many different search parameters. Some of these can be used in any search (i.e., `keywords`), but most are category-specific. Parameters can be found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
+        There are many different search parameters. Some of these can be used in any search (i.e., `minPrice`), but most are category-specific. Additionally, some parameters are specific to which `scraperType` is being used (see [Scraper Options](#scraper-options) for details on how to switch).
 
-        |Parameter   |Type  |Description                                                                   |
-        |------------|------|------------------------------------------------------------------------------|
-        |`keywords`  |String|Search string, with words separated                                           |
-        |`minPrice`  |Number|Minimum price of returned items                                               |
-        |`maxPrice`  |Number|Maximum price of returned items                                               |
-        |`adType`    |String|Type of ad ("OFFER", "WANTED", or undefined - for both)                       |
-        |`sortByName`|String|Search results ordering (e.g., "dateDesc", "dateAsc", "priceDesc", "priceAsc")|
+        * Some known parameters available when using _either_ the `"api"` (default) or `"html"` `scraperType`:
 
-* `options` (optional) - Contains parameters that control the behavior of the scraper. Can be omitted.
+            |Parameter   |Type  |Description                                                  |
+            |------------|------|-------------------------------------------------------------|
+            |`minPrice`  |Number|Minimum price of returned items                              |
+            |`maxPrice`  |Number|Maximum price of returned items                              |
+            |`adType`    |String|Type of ad (`"OFFER"`, `"WANTED"`, or `undefined` - for both)|
+
+        * Some known parameters available when using the `"api"` (default) `scraperType`:
+
+            |Parameter   |Type  |Description                                                                                                           |
+            |------------|------|----------------------------------------------------------------------------------------------------------------------|
+            |`q`         |String|Search string                                                                                                         |
+            |`sortType`  |String|Search results ordering (e.g., `"DATE_DESCENDING"`, `"DISTANCE_ASCENDING"`, `"PRICE_ASCENDING"`, `"PRICE_DESCENDING"`)|
+            |`distance`  |Number|Distance in kilometers                                                                                                |
+            |`priceType` |String|Type of price (e.g., `"SPECIFIED_AMOUNT"`, `"PLEASE_CONTACT"`, `"FREE"`, `"SWAP_TRADE"`)                              |
+
+        * Some known parameters available when using the `"html"` `scraperType`:
+
+            Parameters to use with the `scraperType="html"` can be easily found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
+
+            |Parameter   |Type  |Description                                                                           |
+            |------------|------|--------------------------------------------------------------------------------------|
+            |`keywords`  |String|Search string                                                                         |
+            |`sortByName`|String|Search results ordering (e.g., `"dateDesc"`, `"dateAsc"`, `"priceDesc"`, `"priceAsc"`)|
+
+* `options` (optional) - Contains parameters that control the behavior of searching and scraping. Can be omitted. In addition to the options below, you can also specify everything in [Scraper Options](#scraper-options).
 
     |Option               |Type   |Default Value|Description|
     |---------------------|-------|-------------|-----------|
     |`scrapeResultDetails`|Boolean|`true`      |By default, the details of each query result are scraped in separate, subsequent requests. To suppress this behavior and return only the data retrieved by the initial query, set this option to `false`. Note that ads will lack some information if you do this and `Ad.isScraped()` will return `false` until `Ad.scrape()` is called to retrieve the missing information.|
-    |`minResults`         |Integer|`40`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 40 ads, so if you set this to something like 49, up to 80 results may be retrieved.|
+    |`minResults`         |Integer|`20`         |Minimum number of ads to fetch (if available). Note that Kijiji results are returned in pages of up to 20 ads, so if you set this to something like 29, up to 40 results may be retrieved.|
     |`maxResults`         |Integer|`-1`         |Maximum number of ads to return. This simply removes excess results from the array that is returned (i.e., if `minResults` is 40 and `maxResults` is 7, 40 results will be fetched from Kijiji and the last 33 will be discarded). A negative value indicates no limit.|
 
 * `callback(err, results)` (optional) - A callback called after the search results have been scraped. If an error occurs during scraping, `err` will not be null. If everything is successful, `results` will contain an array of `Ad` objects.
@@ -225,7 +245,7 @@ Returns a `Promise` which resolves to an array of search result `Ad` objects.
 const kijiji = require("kijiji-scraper");
 
 const options = {
-    minResults: 40
+    minResults: 20
 };
 
 const params = {
@@ -253,3 +273,11 @@ function callback(err, ads) {
 }
 kijiji.search(params, options, callback);
 ```
+
+---
+### Scraper options
+Functions that involve retrieving data from Kijiji (`Ad.Get()`, `Ad.scrape()`, and `search()`) take an optional parameter for scraper options. The options are as follows:
+
+|Option        |Type    |Default|Description                                  |
+|--------------|--------|-------|---------------------------------------------|
+|`scraperType` |String  |`"api"`|How to scrape Kijiji. `"api"` to use the mobile API (default) and `"html"` to scrape the website. If you have trouble with one, try the other. It seems that the mobile API doesn't have a rate limit or lockout mechanism (_yet_; please don't abuse this).

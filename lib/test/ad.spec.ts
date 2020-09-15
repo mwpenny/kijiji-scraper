@@ -1,8 +1,9 @@
-import Ad from "../ad";
+import { Ad } from "../ad";
+import { ScraperType } from "../helpers";
 import * as scraper from "../scraper";
 
 describe("Kijiji Ad", () => {
-    const scraperSpy = jest.spyOn(scraper, "default");
+    const scraperSpy = jest.spyOn(scraper, "scrape");
 
     const validateAdValues = (ad: Ad, expected: scraper.AdInfo) => {
         for (const [key, value] of Object.entries(expected)) {
@@ -37,7 +38,6 @@ describe("Kijiji Ad", () => {
             ${"image"}        | ${"http://example.com/someimage"}
             ${"images"}       | ${["http://example.com/image1", "http://example.com/image2"]}
             ${"attributes"}   | ${{ key1: "val1", key2: 123 }}
-            ${"url"}          | ${"http://example.com/somepath"}
         `("should accept user-provided ad properties ($property=$value)", ({ property, value }) => {
             const ad = new Ad("http://example.com", { [property]: value });
             validateAdValues(ad, {
@@ -70,6 +70,11 @@ describe("Kijiji Ad", () => {
         it("should not allow overriding scrape function", () => {
             const ad = new Ad("http://example.com", { scrape: 123 } as any as scraper.AdInfo);
             expect(ad.scrape).toBeInstanceOf(Function);
+        });
+
+        it("should not allow overriding URL", () => {
+            const ad = new Ad("http://example.com", { url: "http://example.org" } as any as scraper.AdInfo);
+            expect(ad.url).toBe("http://example.com");
         });
     });
 
@@ -126,7 +131,11 @@ describe("Kijiji Ad", () => {
         });
     });
 
-    describe("scrape of existing ad object", () => {
+    describe.each`
+        test                         | scraperOptions
+        ${"without scraper options"} | ${undefined}
+        ${"with scraper options"}    | ${{ scraperType: ScraperType.HTML }}
+    `("scrape of existing ad object ($test)", ({ scraperOptions }) => {
         it.each`
             withCallback
             ${true}
@@ -140,12 +149,12 @@ describe("Kijiji Ad", () => {
             expect(ad.isScraped()).toBe(false);
 
             try {
-                await ad.scrape(withCallback ? callback : undefined);
+                await ad.scrape(scraperOptions, withCallback ? callback : undefined);
                 fail("Expected error on scrape");
             } catch (err) {
                 expect(err).toBe(error);
 
-                expect(scraperSpy).toBeCalledWith(ad.url);
+                expect(scraperSpy).toBeCalledWith(ad.url, scraperOptions);
                 expect(ad.isScraped()).toBe(false);
 
                 if (withCallback) {
@@ -179,8 +188,8 @@ describe("Kijiji Ad", () => {
             const callback = jest.fn();
             expect(ad.isScraped()).toBe(false);
 
-            await ad.scrape(withCallback ? callback : undefined);
-            expect(scraperSpy).toBeCalledWith(ad.url);
+            await ad.scrape(scraperOptions, withCallback ? callback : undefined);
+            expect(scraperSpy).toBeCalledWith(ad.url, scraperOptions);
             expect(ad.isScraped()).toBe(true);
             validateAdValues(ad, mockAdInfo);
 
@@ -190,7 +199,11 @@ describe("Kijiji Ad", () => {
         });
     });
 
-    describe("get new ad object", () => {
+    describe.each`
+        test                         | scraperOptions
+        ${"without scraper options"} | ${undefined}
+        ${"with scraper options"}    | ${{ scraperType: ScraperType.HTML }}
+    `("get new ad object ($test)", ({ scraperOptions }) => {
         it.each`
             withCallback
             ${true}
@@ -201,11 +214,11 @@ describe("Kijiji Ad", () => {
             scraperSpy.mockRejectedValue(error);
 
             try {
-                await Ad.Get("http://example.com", withCallback ? callback : undefined);
+                await Ad.Get("http://example.com", scraperOptions, withCallback ? callback : undefined);
                 fail("Expected error on scrape");
             } catch (err) {
                 expect(err).toBe(error);
-                expect(scraperSpy).toBeCalledWith("http://example.com");
+                expect(scraperSpy).toBeCalledWith("http://example.com", scraperOptions);
 
                 if (withCallback) {
                     expect(callback).toBeCalledWith(error, expect.any(Ad));
@@ -230,8 +243,8 @@ describe("Kijiji Ad", () => {
             const callback = jest.fn();
             scraperSpy.mockResolvedValue(mockAdInfo);
 
-            const ad = await Ad.Get("http://example.com", withCallback ? callback : undefined);
-            expect(scraperSpy).toBeCalledWith("http://example.com");
+            const ad = await Ad.Get("http://example.com", scraperOptions, withCallback ? callback : undefined);
+            expect(scraperSpy).toBeCalledWith("http://example.com", scraperOptions);
 
             expect(ad).toBeInstanceOf(Ad);
             expect(ad.url).toBe("http://example.com");
