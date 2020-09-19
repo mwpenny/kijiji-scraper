@@ -70,6 +70,23 @@ describe("Search result API scraper", () => {
         page: 0,
         size: 20
     };
+
+    it("should detect ban", async () => {
+        fetchSpy.mockResolvedValue({ status: 403 });
+
+        try {
+            await search();
+            fail("Expected error for ban");
+        } catch (err) {
+            expect(err.message).toBe(
+                "Kijiji denied access. You are likely temporarily blocked. This " +
+                "can happen if you scrape too aggressively. Try scraping again later, " +
+                "and more slowly. If this happens even when scraping reasonably, please " +
+                "open an issue at: https://github.com/mwpenny/kijiji-scraper/issues"
+            )
+        }
+    });
+
     describe("search parameters", () => {
         it("should pass all defined params in search URL", async () => {
             const params = {
@@ -97,7 +114,11 @@ describe("Search result API scraper", () => {
                 await search();
                 fail("Expected error while scraping results page");
             } catch (err) {
-                expect(err.message).toBe("Result ad has no URL");
+                expect(err.message).toBe(
+                    "Result ad has no URL. It is possible that Kijiji changed their " +
+                    "markup. If you believe this to be the case, please open an issue " +
+                    "at: https://github.com/mwpenny/kijiji-scraper/issues"
+                );
                 validateRequestHeaders();
                 expect(scrapeSpy).not.toBeCalled();
             }
@@ -110,7 +131,11 @@ describe("Search result API scraper", () => {
                 await search();
                 fail("Expected error while scraping results page");
             } catch (err) {
-                expect(err.message).toBe("Result ad could not be parsed");
+                expect(err.message).toBe(
+                    "Result ad could not be parsed. It is possible that Kijiji " +
+                    "changed their markup. If you believe this to be the case, " +
+                    "please open an issue at: https://github.com/mwpenny/kijiji-scraper/issues"
+                );
                 validateRequestHeaders();
                 expect(scrapeSpy).toBeCalled();
             }

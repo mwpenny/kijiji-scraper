@@ -7,9 +7,9 @@ import qs from "querystring";
 import fetch, { Response as FetchResponse } from "node-fetch";
 
 import { Ad } from "../ad";
+import { BANNED, HTML_REQUEST_HEADERS, POSSIBLE_BAD_MARKUP } from "../constants";
 import { AdInfo } from "../scraper";
 import { PageResults, ResolvedSearchParameters } from "../search";
-import { HTML_REQUEST_HEADERS } from "../constants";
 
 const KIJIJI_BASE_URL = "https://www.kijiji.ca";
 const KIJIJI_SEARCH_URL = KIJIJI_BASE_URL + "/b-search.html";
@@ -97,7 +97,7 @@ function parseResultsHTML(html: string): Ad[] {
         };
 
         if (!path) {
-            throw new Error("Result ad has no URL");
+            throw new Error(`Result ad has no URL. ${POSSIBLE_BAD_MARKUP}`);
         }
 
         adResults.push(new Ad(url, info));
@@ -121,9 +121,10 @@ export class HTMLSearcher {
 
             // Kijiji will redirect to the rendered results
             // Grab the destination path so that it can be modified for pagination
-            if (res.status !== 200 || !res.url) {
-                // TODO: detect ban and show a different message
-                throw new Error("Kijiji failed to redirect to results page");
+            if (res.status === 403) {
+                throw new Error(BANNED);
+            } else if (res.status !== 200 || !res.url) {
+                throw new Error(`Kijiji failed to redirect to results page. ${POSSIBLE_BAD_MARKUP}`);
             }
             this.firstResultPageURL = res.url;
         }
@@ -140,7 +141,12 @@ export class HTMLSearcher {
 
         // Search Kijiji
         return fetch(url, { headers: HTML_REQUEST_HEADERS })
-            .then(res => res.text())
+            .then(res => {
+                if (res.status === 403) {
+                    throw new Error(BANNED);
+                }
+                return res.text();
+            })
             .then(body => ({
                 pageResults: parseResultsHTML(body),
                 isLastPage: body.indexOf('"isLastPage":true') !== -1

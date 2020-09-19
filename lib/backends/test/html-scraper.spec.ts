@@ -40,6 +40,23 @@ describe("Ad HTML scraper", () => {
         `;
     };
 
+    it("should detect ban", async () => {
+        fetchSpy.mockResolvedValue({ status: 403 });
+
+        try {
+            await scraper("http://example.com");
+            fail("Expected error for ban");
+        } catch (err) {
+            expect(err.message).toBe(
+                "Kijiji denied access. You are likely temporarily blocked. This " +
+                "can happen if you scrape too aggressively. Try scraping again later, " +
+                "and more slowly. If this happens even when scraping reasonably, please " +
+                "open an issue at: https://github.com/mwpenny/kijiji-scraper/issues"
+            )
+            validateRequest();
+        }
+    });
+
     it.each`
         test                         | html
         ${"Bad markup"}              | ${"Bad markup"}

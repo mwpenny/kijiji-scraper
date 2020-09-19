@@ -8,7 +8,7 @@ import fetch from "node-fetch"
 
 import { Ad } from "../ad";
 import { scrapeAdElement } from "./api-scraper";
-import { API_REQUEST_HEADERS } from "../constants";
+import { API_REQUEST_HEADERS, BANNED, POSSIBLE_BAD_MARKUP } from "../constants";
 import { PageResults, ResolvedSearchParameters } from "../search";
 
 const API_SEARCH_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
@@ -22,12 +22,12 @@ function parseResultsXML(xml: string): Ad[] {
     $("ad\\:ad").each((_i, item) => {
         const url = $(item).find("ad\\:link[rel='self-public-website']").attr("href");
         if (!url) {
-            throw new Error("Result ad has no URL");
+            throw new Error(`Result ad has no URL. ${POSSIBLE_BAD_MARKUP}`);
         }
 
         const info = scrapeAdElement(item);
         if (info === null) {
-            throw new Error("Result ad could not be parsed");
+            throw new Error(`Result ad could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
         }
         adResults.push(new Ad(url, info, true));
     });
@@ -48,9 +48,13 @@ export class APISearcher {
         })}`;
 
         // Search Kijiji
-        // TODO: detect ban
         return fetch(url, { headers: API_REQUEST_HEADERS, compress: true })
-            .then(res => res.text())
+            .then(res => {
+                if (res.status === 403) {
+                    throw new Error(BANNED);
+                }
+                return res.text();
+            })
             .then(body => ({
                 pageResults: parseResultsXML(body),
                 isLastPage: body.match(LAST_PAGE_REGEX) === null

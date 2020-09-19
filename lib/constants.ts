@@ -20,3 +20,8 @@ export const API_REQUEST_HEADERS = {
 export const POSSIBLE_BAD_MARKUP =
     "It is possible that Kijiji changed their markup. " +
     `If you believe this to be the case, please open an issue at: ${BUGS_URL}`;
+
+export const BANNED =
+    "Kijiji denied access. You are likely temporarily blocked. This can happen if " +
+    "you scrape too aggressively. Try scraping again later, and more slowly. If " +
+    `this happens even when scraping reasonably, please open an issue at: ${BUGS_URL}`;

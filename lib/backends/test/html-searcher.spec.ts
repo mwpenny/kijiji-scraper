@@ -133,6 +133,29 @@ describe.each`
         formSubmit: true,
         siteLocale: "en_CA"
     };
+
+    it.each`
+        test                            | firstRequestStatus
+        ${"fail on initial request"}    | ${200}
+        ${"fail on redirected request"} | ${403}
+    `("should detect ban ($test)", async ({ firstRequestStatus }) => {
+        fetchSpy.mockResolvedValueOnce({ status: firstRequestStatus, url: "http://example.com/search/results" });
+        fetchSpy.mockResolvedValueOnce({ status: 403 });
+
+        try {
+            await search();
+            fail("Expected error for ban");
+        } catch (err) {
+            expect(err.message).toBe(
+                "Kijiji denied access. You are likely temporarily blocked. This " +
+                "can happen if you scrape too aggressively. Try scraping again later, " +
+                "and more slowly. If this happens even when scraping reasonably, please " +
+                "open an issue at: https://github.com/mwpenny/kijiji-scraper/issues"
+            )
+            validateRequestHeaders();
+        }
+    });
+    
     describe("search parameters", () => {
         it("should pass all defined params in search URL", async () => {
             const params = {
@@ -165,7 +188,12 @@ describe.each`
                 await search();
                 fail("Expected error for non-200 response code");
             } catch (err) {
-                expect(err.message).toBe("Kijiji failed to redirect to results page");
+                expect(err.message).toBe(
+                    "Kijiji failed to redirect to results page. It is possible " +
+                    "that Kijiji changed their markup. If you believe this to be " +
+                    "the case, please open an issue at: " +
+                    "https://github.com/mwpenny/kijiji-scraper/issues"
+                );
                 validateRequestHeaders();
             }
         });
@@ -250,7 +278,11 @@ describe.each`
                 await search();
                 fail("Expected error while scraping results page");
             } catch (err) {
-                expect(err.message).toBe("Result ad has no URL");
+                expect(err.message).toBe(
+                    "Result ad has no URL. It is possible that Kijiji changed their " +
+                    "markup. If you believe this to be the case, please open an issue " +
+                    "at: https://github.com/mwpenny/kijiji-scraper/issues"
+                );
                 validateRequestHeaders();
             }
         });
@@ -279,6 +311,7 @@ describe.each`
             expect(pageResults).toEqual([expect.objectContaining({
                 image: expectedValue
             })]);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it.each`
@@ -297,6 +330,7 @@ describe.each`
             validateRequestHeaders();
             expect(pageResults.length).toBe(1);
             validator(pageResults[0].date);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should scrape description", async () => {
@@ -307,6 +341,7 @@ describe.each`
             expect(pageResults).toEqual([expect.objectContaining({
                 description: "My desc"
             })]);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should scrape url", async () => {
@@ -317,6 +352,7 @@ describe.each`
             expect(pageResults).toEqual([expect.objectContaining({
                 url: "https://www.kijiji.ca/myad"
             })]);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should exclude featured ads", async () => {
@@ -325,6 +361,7 @@ describe.each`
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults.length).toBe(1);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should exclude third-party ads", async () => {
@@ -333,6 +370,7 @@ describe.each`
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults.length).toBe(1);
+            expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it.each`
@@ -349,6 +387,7 @@ describe.each`
             const result = await search();
             validateRequestHeaders();
             expect(result.pageResults.length).toBe(1);
+            expect(result.pageResults[0].isScraped()).toBe(false);
             expect(result.isLastPage).toBe(isLastPage);
         });
 

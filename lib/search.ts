@@ -4,7 +4,6 @@
 import { Ad } from "./ad";
 import { APISearcher } from "./backends/api-searcher";
 import { HTMLSearcher } from "./backends/html-searcher";
-import { POSSIBLE_BAD_MARKUP } from "./constants";
 import { getScraperOptions, ScraperOptions, ScraperType } from "./helpers";
 
 // Helper for location and category IDs
@@ -132,9 +131,7 @@ async function getSearchResults(searcher: Searcher, params: ResolvedSearchParame
             }
         }
     } catch (err) {
-        throw new Error(
-            `Error parsing Kijiji search results: ${err.message}. ${POSSIBLE_BAD_MARKUP}`
-        );
+        throw new Error(`Error parsing Kijiji search results: ${err.message}`);
     }
     return results;
 }

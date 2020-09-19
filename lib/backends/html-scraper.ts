@@ -4,7 +4,7 @@
 import fetch from "node-fetch";
 import cheerio from "cheerio";
 
-import { HTML_REQUEST_HEADERS } from "../constants";
+import { BANNED, HTML_REQUEST_HEADERS } from "../constants";
 import { cleanAdDescription, getLargeImageURL, isNumber } from "../helpers";
 import { AdInfo } from "../scraper";
 
@@ -77,9 +77,13 @@ function parseResponseHTML(html: string): AdInfo | null {
 
 /* Scrapes the page at the passed Kijiji ad URL */
 export function scrapeHTML(url: string): Promise<AdInfo | null> {
-    // TODO: detect ban
     return fetch(url, { headers: HTML_REQUEST_HEADERS })
-            .then(res => res.text())
+            .then(res => {
+                if (res.status === 403) {
+                    throw new Error(BANNED);
+                }
+                return res.text();
+            })
             .then(body => {
                 return parseResponseHTML(body);
             });

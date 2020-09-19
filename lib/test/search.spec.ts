@@ -56,10 +56,7 @@ describe.each`
             fail("Expected error while searching");
         } catch (err) {
             expect(err.message).toBe(
-                "Error parsing Kijiji search results: Error searching. " +
-                "It is possible that Kijiji changed their markup. " +
-                "If you believe this to be the case, please open an issue at: " +
-                "https://github.com/mwpenny/kijiji-scraper/issues"
+                "Error parsing Kijiji search results: Error searching"
             );
         }
     });

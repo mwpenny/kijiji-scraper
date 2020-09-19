@@ -4,7 +4,7 @@
 import fetch from "node-fetch";
 import cheerio from "cheerio";
 
-import { API_REQUEST_HEADERS } from "../constants";
+import { API_REQUEST_HEADERS, BANNED } from "../constants";
 import { cleanAdDescription, getLargeImageURL, isNumber } from "../helpers";
 import { AdInfo } from "../scraper";
 
@@ -105,9 +105,13 @@ export function scrapeAPI(url: string): Promise<AdInfo | null> {
     }
 
     url = `${API_ADS_ENDPOINT}/${adIdMatch[1]}`;
-    // TODO: detect ban
     return fetch(url, { headers: API_REQUEST_HEADERS, compress: true })
-        .then(res => res.text())
+        .then(res => {
+            if (res.status === 403) {
+                throw new Error(BANNED);
+            }
+            return res.text();
+        })
         .then(body => {
             return parseResponseXML(body);
         });
