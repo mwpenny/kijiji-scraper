@@ -3,7 +3,7 @@
 /**
  * Geographical locations and their corresponding Kijiji locationId values
  */
-export default {
+export const locations = {
     id: 0,
     ALBERTA: {
         id: 9003,

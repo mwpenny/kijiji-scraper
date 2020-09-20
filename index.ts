@@ -1,7 +1,9 @@
 // index.ts
 /* Exports the kijiji-scraper submodules */
 
-export { default as Ad } from "./lib/ad";
-export { default as search } from "./lib/search";
-export { default as locations } from "./lib/locations";
-export { default as categories } from "./lib/categories";
+export { Ad } from "./lib/ad";
+export { AdInfo } from "./lib/scraper";
+export { search, SearchParameters, SearchOptions } from "./lib/search";
+export { ScraperOptions, ScraperType } from "./lib/helpers";
+export { categories } from "./lib/categories";
+export { locations } from "./lib/locations";

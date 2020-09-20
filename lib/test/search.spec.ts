@@ -1,115 +1,38 @@
-jest.mock("node-fetch");
-
-import cheerio from "cheerio";
-import fetch from "node-fetch";
-import qs from "querystring";
-import search, { SearchParameters } from "../search";
+import { Ad } from "../ad";
+import { search, SearchParameters } from "../search";
+import { APISearcher } from "../backends/api-searcher";
+import { HTMLSearcher } from "../backends/html-searcher";
+import * as helpers from "../helpers";
 import * as scraper from "../scraper";
 
-const fetchSpy = fetch as any as jest.Mock;
-const scraperSpy = jest.spyOn(scraper, "default");
-
-type ResultInfo = {
-    isFeatured: boolean;
-    isThirdParty: boolean;
-    title: string;
-    path: string;
-    description: string;
-    imageAttributes: string;
-    datePosted: string;
-};
-
-const defaultResultInfo: ResultInfo = {
-    isFeatured: false,
-    isThirdParty: false,
-    title: "",
-    path: "",
-    description: "",
-    imageAttributes: "",
-    datePosted: ""
-};
-
-// Result pages in most categories use this markup
-const createStandardResultHTML = (info: Partial<ResultInfo>): string => {
-    info = { ...defaultResultInfo, ...info };
-
-    return `
-        <div class="search-item
-            ${info.isFeatured ? "top-feature" : "regular-ad"}
-            ${info.isThirdParty ? "third-party" : ""}">
-            <div class="clearfix">
-                <div class="left-col">
-                    <div class="image">
-                        <picture><img ${info.imageAttributes}></picture>
-                    </div>
-
-                    <div class="info">
-                        <div class="info-container">
-                            <div class="title">
-                                <a class="title" href="${info.path}">${info.title}</a>
-                            </div>
-
-                            <div class="location">
-                                <span class="">Some location</span>
-                                <span class="date-posted">${info.datePosted}</span>
-                            </div>
-
-                            <div class="description">${info.description}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-};
-
-// For some reason, some categories (like anything under
-// SERVICES) use different markup classes than usual
-const createServiceResultHTML = (info: Partial<ResultInfo>): string => {
-    info = { ...defaultResultInfo, ...info };
-
-    return `
-        <table class="
-            ${info.isFeatured ? "top-feature" : "regular-ad"}
-            ${info.isThirdParty ? "third-party" : ""}">
-            <tbody>
-                <tr>
-                    <td class="description">
-                        <a class="title" href="${info.path}">${info.title}</a>
-                        <p>${info.description}</p>
-                    </td>
-
-                    <td class="image">
-                        <div class="multiple-images">
-                            <picture><img ${info.imageAttributes}></picture>
-                        </div>
-                    </td>
-
-                    <td class="posted">
-                        ${info.datePosted}<br>
-                        Some location
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    `;
-};
-
 describe.each`
-    markup                           | createResultHTML
-    ${"standard result page markup"} | ${createStandardResultHTML}
-    ${"service result page markup"}  | ${createServiceResultHTML}
-`("Search result HTML scraper ($markup)", ({ createResultHTML }) => {
+    scraperType
+    ${helpers.ScraperType.API}
+    ${helpers.ScraperType.HTML}
+`("Ad searcher (scraperType=$scraperType)", ({ scraperType }) => {
+    const scraperSpy = jest.spyOn(scraper, "scrape");
+    const getAPIPageResultsSpy = jest.spyOn(APISearcher.prototype, "getPageResults");
+    const getHTMLPageResultsSpy = jest.spyOn(HTMLSearcher.prototype, "getPageResults");
+    const sleepSpy = jest.spyOn(helpers, "sleep");
+
+    const activeSearcher = scraperType === helpers.ScraperType.API
+        ? getAPIPageResultsSpy
+        : getHTMLPageResultsSpy;
+    const allSearchers = [
+        getAPIPageResultsSpy,
+        getHTMLPageResultsSpy
+    ];
+
+    const getScraperOptionsSpy = jest.spyOn(helpers, "getScraperOptions");
+
+    beforeEach(() => {
+        sleepSpy.mockResolvedValue();
+        getScraperOptionsSpy.mockReturnValue({ scraperType });
+    });
+
     afterEach(() => {
         jest.resetAllMocks();
     });
-
-    const validateSearchUrl = (url: string, expectedParams: SearchParameters) => {
-        const splitUrl = url.split("?");
-        expect(splitUrl.length).toBe(2);
-        expect(splitUrl[0]).toBe("https://www.kijiji.ca/b-search.html")
-        expect(qs.parse(splitUrl[1])).toEqual(qs.parse(qs.stringify(expectedParams)));
-    };
 
     const defaultSearchParams: SearchParameters = {
         locationId: 0,
@@ -117,15 +40,39 @@ describe.each`
         formSubmit: true,
         siteLocale: "en_CA"
     };
+
+    const expectSearcherCall = (expected: SearchParameters = defaultSearchParams) => {
+        expect(activeSearcher).toBeCalledWith(expected, 1);
+        allSearchers.forEach(s => {
+            if (s !== activeSearcher) {
+                expect(s).not.toBeCalled();
+            }
+        });
+    };
+
+    it("should catch search errors", async () => {
+        activeSearcher.mockImplementationOnce(() => { throw new Error("Error searching"); });
+
+        try {
+            await search({});
+            fail("Expected error while searching");
+        } catch (err) {
+            expect(err.message).toBe(
+                "Error parsing Kijiji search results: Error searching"
+            );
+        }
+    });
+
     describe("search parameters", () => {
         it("should use default values if none are specified", async () => {
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [],
+                isLastPage: true
+            });
 
             await search({});
 
-            expect(fetchSpy).toBeCalled();
-            validateSearchUrl(fetchSpy.mock.calls[0][0], defaultSearchParams);
+            expectSearcherCall(defaultSearchParams);
         });
 
         describe.each`
@@ -147,44 +94,60 @@ describe.each`
                     fail(`Expected error for bad ${param}`);
                 } catch (err) {
                     expect(err.message).toBe(`Integer property '${param}' must be specified`);
-                    expect(fetchSpy).not.toBeCalled();
+                    allSearchers.forEach(s => expect(s).not.toBeCalled());
                 }
             });
 
             it("should allow integers", async () => {
-                fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-                fetchSpy.mockResolvedValueOnce({ text: () => "" });
+                activeSearcher.mockResolvedValueOnce({
+                    pageResults: [],
+                    isLastPage: true
+                });
 
                 await search({ [param]: (useObject ? { id: 123 } : 123) });
 
-                expect(fetchSpy).toBeCalled();
-                validateSearchUrl(fetchSpy.mock.calls[0][0], {
+                expectSearcherCall({
                     ...defaultSearchParams,
                     [param]: 123
                 });
             });
         });
 
-        it("should pass all defined params in search URL", async () => {
+        it("should pass all defined params to searcher", async () => {
             const params = { ...defaultSearchParams };
             params.locationId = 123;
             params.categoryId = 456;
             params.someOtherParam = "hello";
             params.undef = undefined;
 
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [],
+                isLastPage: true
+            });
 
             await search(params);
 
-            expect(fetchSpy).toBeCalled();
-            validateSearchUrl(fetchSpy.mock.calls[0][0], params);
+            expectSearcherCall(params);
         });
     });
 
     describe("search options", () => {
+        it("should not search if retrieving options throws error", async () => {
+            getScraperOptionsSpy.mockImplementation(() => { throw new Error("Bad options"); });
+
+            try {
+                await search({});
+                fail("Expected error for bad scraper options");
+            } catch (err) {
+                expect(err.message).toBe("Bad options");
+                allSearchers.forEach(s => expect(s).not.toBeCalled());
+            }
+        });
+
         describe.each`
             option
+            ${"pageDelayMs"}
+            ${"resultDetailsDelayMs"}
             ${"minResults"}
             ${"maxResults"}
         `("$option validation", ({ option }) => {
@@ -200,46 +163,105 @@ describe.each`
                     fail(`Expected error for bad ${option}`);
                 } catch (err) {
                     expect(err.message).toBe(`Integer property '${option}' must be specified`);
-                    expect(fetchSpy).not.toBeCalled();
+                    allSearchers.forEach(s => expect(s).not.toBeCalled());
                 }
             });
 
             it("should allow integers", async () => {
-                fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-                fetchSpy.mockResolvedValueOnce({ text: () => "" });
+                activeSearcher.mockResolvedValueOnce({
+                    pageResults: [],
+                    isLastPage: true
+                });
 
                 await search({}, { [option]: 123 });
 
-                expect(fetchSpy).toBeCalledTimes(2);
+                expectSearcherCall();
             });
         });
 
-        describe("scrapeResultDetails", () => {
+        describe.each`
+            resultDetailsDelayMs
+            ${0}
+            ${1000}
+        `("scrapeResultDetails (resultDetailsDelayMs=$resultDetailsDelayMs)", ({ resultDetailsDelayMs }) => {
             it.each`
                 test                 | value
                 ${"true by default"} | ${undefined}
                 ${"explicitly true"} | ${true}
             `("should scrape result details if true ($test)", async ({ value }) => {
-                fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-                fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "/myad" }) });
-                fetchSpy.mockResolvedValueOnce({ text: () => "" });
+                activeSearcher.mockResolvedValueOnce({
+                    pageResults: [
+                        new Ad("http://example.com/1"),
+                        new Ad("http://example.com/2")
+                    ],
+                    isLastPage: true
+                });
                 scraperSpy.mockResolvedValueOnce({ title: "My title" } as scraper.AdInfo);
+                scraperSpy.mockResolvedValueOnce({ title: "My title2" } as scraper.AdInfo);
 
-                const ads = await search({}, { scrapeResultDetails: value });
+                let scraperCalls = 0;
+                sleepSpy.mockImplementation(async () => {
+                    expect(scraperSpy).toBeCalledTimes(++scraperCalls);
+                });
 
-                expect(scraperSpy).toBeCalledWith("https://www.kijiji.ca/myad");
-                expect(ads).toEqual([expect.objectContaining({
-                    title: "My title"
-                })]);
+                const ads = await search({}, {
+                    scrapeResultDetails: value,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
+
+                expectSearcherCall();
+                expect(scraperSpy.mock.calls).toEqual([
+                    ["http://example.com/1", undefined],
+                    ["http://example.com/2", undefined]
+                ]);
+                expect(ads).toEqual([
+                    expect.objectContaining({ title: "My title" }),
+                    expect.objectContaining({ title: "My title2" })
+                ]);
+
+                if (resultDetailsDelayMs > 0) {
+                    expect(sleepSpy.mock.calls).toEqual([
+                        [resultDetailsDelayMs],
+                        [resultDetailsDelayMs]
+                    ]);
+                } else {
+                    expect(sleepSpy).not.toBeCalled();
+                }
             });
 
             it("should not scrape result details if false", async () => {
-                fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-                fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "/myad" }) });
-                fetchSpy.mockResolvedValueOnce({ text: () => "" });
+                activeSearcher.mockResolvedValueOnce({
+                    pageResults: [new Ad("")],
+                    isLastPage: true
+                });
 
-                const ads = await search({}, { scrapeResultDetails: false });
+                const ads = await search({}, {
+                    scrapeResultDetails: false,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
 
+                expectSearcherCall();
+                expect(scraperSpy).not.toBeCalled();
+                expect(ads).toEqual([expect.objectContaining({
+                    title: ""
+                })]);
+            });
+
+            it("should not scrape result details if already scraped", async () => {
+                activeSearcher.mockResolvedValueOnce({
+                    pageResults: [new Ad("", undefined, true)],
+                    isLastPage: true
+                });
+
+                const ads = await search({}, {
+                    scrapeResultDetails: true,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
+
+                expectSearcherCall();
                 expect(scraperSpy).not.toBeCalled();
                 expect(ads).toEqual([expect.objectContaining({
                     title: ""
@@ -248,18 +270,62 @@ describe.each`
         });
 
         it.each`
+            test                         | value        | expectedDelay
+            ${"default value of 1000"}   | ${undefined} | ${1000}
+            ${"explicitly set to 1000"}  | ${1000}      | ${1000}
+            ${"explicitly set to 5000"}  | ${5000}      | ${5000}
+            ${"explicitly set to 0"}     | ${0}         | ${0}
+        `("should delay between pages based on pageDelayMs ($test)", async ({ value, expectedDelay }) => {
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [new Ad("")],
+                isLastPage: false
+            });
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [new Ad(""), new Ad("")],
+                isLastPage: false
+            });
+            sleepSpy.mockImplementationOnce(async () => {
+                expect(activeSearcher).toBeCalledTimes(1);
+            });
+
+            const ads = await search({}, {
+                scrapeResultDetails: false,
+                pageDelayMs: value,
+                minResults: 2,
+                scraperType
+            });
+
+            // We shouldn't delay after the last page
+            expect(sleepSpy.mock.calls).toEqual([[expectedDelay]]);
+            expect(ads.length).toBe(3);
+            expect(activeSearcher).toBeCalledTimes(2);
+            allSearchers.forEach(s => {
+                if (s !== activeSearcher) {
+                    expect(s).not.toBeCalled();
+                }
+            });
+        });
+
+        it.each`
             test                      | value        | expectedRequestCount
-            ${"default value of 40"}  | ${undefined} | ${40}
+            ${"default value of 20"}  | ${undefined} | ${20}
             ${"explicitly set to 5"}  | ${5}         | ${5}
             ${"explicitly set to 0"}  | ${0}         | ${0}
             ${"explicitly set to -1"} | ${-1}        | ${0}
         `("should stop scraping if minResults ads are found ($test)", async ({ value, expectedRequestCount }) => {
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValue({ text: () => createResultHTML({}) });
+            activeSearcher.mockResolvedValue({
+                pageResults: [new Ad("")],
+                isLastPage: false
+            });
 
             const ads = await search({}, { scrapeResultDetails: false, minResults: value });
             expect(ads.length).toBe(expectedRequestCount);
-            expect(fetchSpy).toBeCalledTimes(expectedRequestCount + 1);
+            expect(activeSearcher).toBeCalledTimes(expectedRequestCount);
+            allSearchers.forEach(s => {
+                if (s !== activeSearcher) {
+                    expect(s).not.toBeCalled();
+                }
+            });
         });
 
         it.each`
@@ -268,249 +334,51 @@ describe.each`
             ${"explicitly set to -1"} | ${5}         | ${5}
             ${"explicitly set to 3"}  | ${3}         | ${3}
         `("should truncate results based on maxResults ($test)", async ({ value, expectedResultCount }) => {
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
+            activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: false });
+            activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: false });
+            activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: false });
+            activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: false });
+            activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: true });
 
             const ads = await search({}, { scrapeResultDetails: false, maxResults: value });
+
             expect(ads.length).toBe(expectedResultCount);
-            expect(fetchSpy).toBeCalledTimes(7);
-        });
-    });
-
-    describe("result page redirect", () => {
-        it.each`
-            test                       | response
-            ${"non-200 response code"} | ${{ status: 418 }}
-            ${"no redirect"}           | ${{ status: 200 }}
-        `("should throw error for bad response ($test)", async ({ response }) => {
-            fetchSpy.mockResolvedValue(response);
-
-            try {
-                await search({});
-                fail("Expected error for non-200 response code");
-            } catch (err) {
-                expect(err.message).toBe(
-                    "Kijiji failed to return search results. " +
-                    "It is possible that Kijiji changed their " +
-                    "results markup. If you believe this to be " +
-                    "the case, please open a bug at: " +
-                    "https://github.com/mwpenny/kijiji-scraper/issues"
-                );
+            for (let i = 1; i <= 5; ++i) {
+                expect(activeSearcher).toHaveBeenNthCalledWith(i, defaultSearchParams, i);
             }
-        });
-
-        it("should be used for pagination", async () => {
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            await search({}, { scrapeResultDetails: false });
-
-            expect(fetchSpy).toBeCalledTimes(3);
-            validateSearchUrl(fetchSpy.mock.calls[0][0], defaultSearchParams);
-            expect(fetchSpy.mock.calls.slice(1)).toEqual([
-                ["http://example.com/search/page-1/results"],
-                ["http://example.com/search/page-2/results"]
-            ]);
-        });
-    });
-
-    describe("result page scraping", () => {
-        // Helpers for date tests
-        const nanDataValidator = (date: Date) => {
-            expect(Number.isNaN(date.getTime())).toBe(true);
-        };
-        const makeSpecificDateValidator = (month: number, day: number, year: number) => {
-            return (date: Date) => {
-                const d = new Date();
-                d.setMonth(month - 1);
-                d.setDate(day);
-                d.setFullYear(year);
-                d.setHours(0, 0, 0, 0);
-
-                expect(date).toEqual(d);
-            }
-        };
-        const makeMinutesAgoValidator = (minutes: number) => {
-            return (date: Date) => {
-                const minutesAgo = new Date();
-                minutesAgo.setMinutes(minutesAgo.getMinutes() - minutes, 0, 0);
-
-                expect(date).toEqual(minutesAgo);
-            }
-        };
-        const makeHoursAgoValidator = (hours: number) => {
-            return (date: Date) => {
-                const hoursAgo = new Date();
-                hoursAgo.setHours(hoursAgo.getHours() - hours, 0, 0, 0);
-
-                expect(date).toEqual(hoursAgo);
-            }
-        };
-        const makeDaysAgoValidator = (days: number) => {
-            return (date: Date) => {
-                const daysAgo = new Date();
-                daysAgo.setDate(daysAgo.getDate() - days);
-                daysAgo.setHours(0, 0, 0, 0);
-
-                expect(date).toEqual(daysAgo);
-            }
-        };
-        const nowIshValidator = (date: Date) => {
-            const nowIsh = new Date();
-            nowIsh.setSeconds(date.getSeconds());
-            nowIsh.setMilliseconds(date.getMilliseconds());
-
-            expect(date).toEqual(nowIsh);
-        };
-
-        beforeEach(() => {
-            fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-        });
-
-        it("should throw error if scraping fails", async () => {
-            const warnSpy = jest.spyOn(console, "warn").mockImplementationOnce(() => {});
-            const loadSpy = jest.spyOn(cheerio, "load");
-            loadSpy.mockImplementationOnce(() => { throw new Error("Catastrophe"); });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-
-            try {
-                await search({});
-                fail("Expected error while scraping results page");
-            } catch (err) {
-                expect(err.message).toBe("Invalid Kijiji HTML on search results page (http://example.com/search/page-1/results)");
-                expect(warnSpy).toBeCalledWith("WARNING: Failed to parse search result: Error: Catastrophe");
-                loadSpy.mockRestore();
-                warnSpy.mockRestore();
-            }
-        });
-
-        it("should scrape title", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ title: "My title" }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads).toEqual([expect.objectContaining({
-                title: "My title"
-            })]);
-        });
-
-        it.each`
-            test                    | imageAttributes                   | expectedValue
-            ${"with data-src"}      | ${'data-src="/image" src="blah"'} | ${"/image"}
-            ${"with src"}           | ${'data-src="" src="/image"'}     | ${"/image"}
-            ${"with no attributes"} | ${""}                             | ${""}
-            ${"upsize"}             | ${'src="/image/s-l123.jpg"'}      | ${"/image/s-l2000.jpg"}
-        `("should scrape image ($test)", async ({ imageAttributes, expectedValue }) => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ imageAttributes }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads).toEqual([expect.objectContaining({
-                image: expectedValue
-            })]);
-        });
-
-        it.each`
-            test             | datePosted           | validator
-            ${"no date"}     | ${""}                | ${nanDataValidator}
-            ${"invalid"}     | ${"invalid"}         | ${nanDataValidator}
-            ${"dd/mm/yyyy"}  | ${"7/9/2020"}        | ${makeSpecificDateValidator(9, 7, 2020)}
-            ${"minutes ago"} | ${"< 5 minutes ago"} | ${makeMinutesAgoValidator(5)}
-            ${"hours ago"}   | ${"< 2 hours ago"}   | ${makeHoursAgoValidator(2)}
-            ${"invalid ago"} | ${"< 1 parsec ago"}  | ${nowIshValidator}
-            ${"yesterday"}   | ${"yesterday"}       | ${makeDaysAgoValidator(1)}
-        `("should scrape date ($test)", async ({ datePosted, validator }) => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ datePosted }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads.length).toBe(1);
-            validator(ads[0].date);
-        });
-
-        it("should scrape description", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ description: "My desc" }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads).toEqual([expect.objectContaining({
-                description: "My desc"
-            })]);
-        });
-
-        it("should scrape url", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "/myad" }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads).toEqual([expect.objectContaining({
-                url: "https://www.kijiji.ca/myad"
-            })]);
-        });
-
-        it("should exclude featured ads", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) + createResultHTML({ isFeatured: true }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads.length).toBe(1);
-        });
-
-        it("should exclude third-party ads", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) + createResultHTML({ isThirdParty: true }) });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads.length).toBe(1);
-        });
-
-        it("should stop scraping on last page", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) + '"isLastPage":true' });
-
-            const ads = await search({}, { scrapeResultDetails: false });
-            expect(ads.length).toBe(2);
-            expect(fetchSpy).toBeCalledTimes(3);
-        });
-
-        it("should stop scraping if no results are found", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const ads = await search({});
-            expect(ads.length).toBe(0);
-            expect(fetchSpy).toBeCalledTimes(2);
-        });
-
-        describe("callback", () => {
-            it("should be called on success", async () => {
-                fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ title: "My title" }) });
-                fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-                const callback = jest.fn();
-                const ads = await search({}, { scrapeResultDetails: false }, callback);
-
-                expect(callback).toBeCalledWith(null, ads);
-            });
-
-            it("should be called on error", async () => {
-                fetchSpy.mockImplementationOnce(() => { throw new Error("Bad fetch"); });
-
-                const callback = jest.fn();
-
-                try {
-                    await search({}, {}, callback);
-                    fail("Expected error");
-                } catch (error) {
-                    expect(error.message).toBe("Bad fetch");
-                    expect(callback).toBeCalledWith(expect.objectContaining({ message: "Bad fetch" }), []);
+            allSearchers.forEach(s => {
+                if (s !== activeSearcher) {
+                    expect(s).not.toBeCalled();
                 }
             });
+        });
+    });
+
+    describe("callback", () => {
+        it("should be called on success", async () => {
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [new Ad("")],
+                isLastPage: true
+            });
+
+            const callback = jest.fn();
+            const ads = await search({}, { scrapeResultDetails: false }, callback);
+
+            expectSearcherCall();
+            expect(callback).toBeCalledWith(null, ads);
+        });
+
+        it("should be called on error", async () => {
+            activeSearcher.mockImplementationOnce(() => { throw new Error("Bad search"); });
+
+            const callback = jest.fn();
+
+            try {
+                await search({}, {}, callback);
+                fail("Expected error");
+            } catch (error) {
+                expect(callback).toBeCalledWith(expect.any(Error), []);
+            }
         });
     });
 });

@@ -1,7 +1,7 @@
 module.exports = {
     collectCoverage: true,
     collectCoverageFrom: [
-        "lib/*.ts"
+        "lib/**/*.ts"
     ],
     coveragePathIgnorePatterns: [
         "categories.ts",

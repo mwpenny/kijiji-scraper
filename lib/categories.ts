@@ -3,7 +3,7 @@
 /**
  * Ad categories and their corresponding Kijiji categoryId values
  */
-export default {
+export const categories = {
     id: 0,
     KIJIJI_VILLAGE: { id: 36611001 },
     BUY_AND_SELL: {

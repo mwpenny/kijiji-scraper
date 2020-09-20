@@ -1,7 +1,8 @@
 // ad.ts
 /* Kijiji ad object definition */
 
-import scraper, { AdInfo } from "./scraper";
+import { scrape, AdInfo } from "./scraper";
+import { ScraperOptions } from "./helpers";
 
 /* Nicely formats a date string */
 function DateToString(date: Date): string {
@@ -17,7 +18,7 @@ function DateToString(date: Date): string {
  * This class encapsulates a Kijiji ad and its properties. It also
  * handles retrieving this information from Kijiji
  */
-export default class KijijiAd extends AdInfo {
+export class Ad extends AdInfo {
     /**
      * Manually constructs an `Ad` object
      *
@@ -36,7 +37,6 @@ export default class KijijiAd extends AdInfo {
     constructor(url: string, info: Partial<AdInfo> = {}, scraped=false) {
         super();
         let isScraped = scraped;
-        this.url = url;
 
         /* Updates ad properties with specified values */
         const updateInfo = (info: Partial<AdInfo>): void => {
@@ -48,9 +48,10 @@ export default class KijijiAd extends AdInfo {
             }
         };
         updateInfo(info);
+        this.url = url;
 
-        this.scrape = (callback?: (err: Error | null) => void): Promise<void> => {
-            const promise = scraper(this.url).then(newInfo => {
+        this.scrape = (options?: ScraperOptions, callback?: (err: Error | null) => void): Promise<void> => {
+            const promise = scrape(this.url, options).then(newInfo => {
                 updateInfo(newInfo);
                 isScraped = true;
             });
@@ -68,21 +69,22 @@ export default class KijijiAd extends AdInfo {
      * Creates an `Ad` by scraping the passed ad URL
      *
      * @param url Kijiji ad URL
+     * @param options Options to pass to the scraper
      * @param callback Called after the ad has been scraped. If an
      *                 error occurs during scraping, `err` will not
      *                 be `null`. If everything is successful, `ad`
      *                 will be an `Ad` object corresponding to `url`.
      * @returns `Promise` which resolves to an `Ad` corresponding to `url`
      */
-    static Get(url: string, callback?: (err: Error | null, ad: KijijiAd) => void): Promise<KijijiAd> {
-        const promise = scraper(url).then(function(info) {
-            return new KijijiAd(url, info, true);
+    static Get(url: string, options?: ScraperOptions, callback?: (err: Error | null, ad: Ad) => void): Promise<Ad> {
+        const promise = scrape(url, options).then(info => {
+            return new Ad(url, info, true);
         });
 
         if (callback) {
             promise.then(
                 ad => callback(null, ad),
-                err => callback(err, new KijijiAd(""))
+                err => callback(err, new Ad(""))
             );
         }
         return promise;
@@ -104,11 +106,12 @@ export default class KijijiAd extends AdInfo {
      * automatically, such as using the constructor or performing a
      * search with the `scrapeResultDetails` option set to `false`.
      *
+     * @param options Options to pass to the scraper
      * @param callback Called after the ad has been scraped. If an error
      *                 occurs during scraping, `err` will not be `null`.
      * @returns `Promise` that resolves once scraping has completed
      */
-    scrape: (callback?: (err: Error | null) => void) => Promise<void>;
+    scrape: (options?: ScraperOptions, callback?: (err: Error | null) => void) => Promise<void>;
 
     /**
      * Convert the ad to a string
@@ -138,4 +141,4 @@ export default class KijijiAd extends AdInfo {
         }
         return str;
     }
-}
+};
