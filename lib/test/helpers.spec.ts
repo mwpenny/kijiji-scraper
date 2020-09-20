@@ -1,6 +1,29 @@
-import { isNumber, getLargeImageURL, cleanAdDescription, getScraperOptions, ScraperOptions, ScraperType } from "../helpers";
+import { isNumber, getLargeImageURL, cleanAdDescription, getScraperOptions, ScraperOptions, ScraperType, sleep } from "../helpers";
 
 describe("Helpers", () => {
+    const setTimeoutSpy = jest.spyOn(global, "setTimeout");
+
+    afterEach(() => {
+        jest.resetAllMocks();
+    });
+
+    it("sleep should wait the specified time", async () => {
+        let callback: Function | undefined = undefined;
+        setTimeoutSpy.mockImplementationOnce(
+            (handler: TimerHandler, _timeout?: number, ..._args: any[]) => {
+                callback = handler as Function;
+                return 0;
+            }
+        );
+
+        const promise = sleep(1234).then(() => "done");
+        expect(setTimeoutSpy).toBeCalledWith(expect.any(Function), 1234);
+        expect(callback).toBeDefined();
+
+        callback!();
+        expect(await promise).toBe("done");
+    });
+
     it.each`
         input         | expectedResult
         ${"123"}      | ${true}

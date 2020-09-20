@@ -30,7 +30,13 @@ export type ScraperOptions = {
     scraperType?: ScraperType;
 };
 
-export function isNumber(value: string) {
+export function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
+export function isNumber(value: string): boolean {
     value = value.trim();
     return value.length > 0 && !Number.isNaN(Number(value)) && Number.isFinite(Number(value));
 };

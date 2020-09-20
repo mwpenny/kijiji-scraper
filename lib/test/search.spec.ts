@@ -5,15 +5,16 @@ import { HTMLSearcher } from "../backends/html-searcher";
 import * as helpers from "../helpers";
 import * as scraper from "../scraper";
 
-const scraperSpy = jest.spyOn(scraper, "scrape");
-const getAPIPageResultsSpy = jest.spyOn(APISearcher.prototype, "getPageResults");
-const getHTMLPageResultsSpy = jest.spyOn(HTMLSearcher.prototype, "getPageResults");
-
 describe.each`
     scraperType
     ${helpers.ScraperType.API}
     ${helpers.ScraperType.HTML}
 `("Ad searcher (scraperType=$scraperType)", ({ scraperType }) => {
+    const scraperSpy = jest.spyOn(scraper, "scrape");
+    const getAPIPageResultsSpy = jest.spyOn(APISearcher.prototype, "getPageResults");
+    const getHTMLPageResultsSpy = jest.spyOn(HTMLSearcher.prototype, "getPageResults");
+    const sleepSpy = jest.spyOn(helpers, "sleep");
+
     const activeSearcher = scraperType === helpers.ScraperType.API
         ? getAPIPageResultsSpy
         : getHTMLPageResultsSpy;
@@ -25,6 +26,7 @@ describe.each`
     const getScraperOptionsSpy = jest.spyOn(helpers, "getScraperOptions");
 
     beforeEach(() => {
+        sleepSpy.mockResolvedValue();
         getScraperOptionsSpy.mockReturnValue({ scraperType });
     });
 
@@ -144,6 +146,8 @@ describe.each`
 
         describe.each`
             option
+            ${"pageDelayMs"}
+            ${"resultDetailsDelayMs"}
             ${"minResults"}
             ${"maxResults"}
         `("$option validation", ({ option }) => {
@@ -175,26 +179,55 @@ describe.each`
             });
         });
 
-        describe("scrapeResultDetails", () => {
+        describe.each`
+            resultDetailsDelayMs
+            ${0}
+            ${1000}
+        `("scrapeResultDetails (resultDetailsDelayMs=$resultDetailsDelayMs)", ({ resultDetailsDelayMs }) => {
             it.each`
                 test                 | value
                 ${"true by default"} | ${undefined}
                 ${"explicitly true"} | ${true}
             `("should scrape result details if true ($test)", async ({ value }) => {
                 activeSearcher.mockResolvedValueOnce({
-                    pageResults: [new Ad("http://example.com")],
+                    pageResults: [
+                        new Ad("http://example.com/1"),
+                        new Ad("http://example.com/2")
+                    ],
                     isLastPage: true
                 });
-
                 scraperSpy.mockResolvedValueOnce({ title: "My title" } as scraper.AdInfo);
+                scraperSpy.mockResolvedValueOnce({ title: "My title2" } as scraper.AdInfo);
 
-                const ads = await search({}, { scrapeResultDetails: value, scraperType });
+                let scraperCalls = 0;
+                sleepSpy.mockImplementation(async () => {
+                    expect(scraperSpy).toBeCalledTimes(++scraperCalls);
+                });
+
+                const ads = await search({}, {
+                    scrapeResultDetails: value,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
 
                 expectSearcherCall();
-                expect(scraperSpy).toBeCalledWith("http://example.com", undefined);
-                expect(ads).toEqual([expect.objectContaining({
-                    title: "My title"
-                })]);
+                expect(scraperSpy.mock.calls).toEqual([
+                    ["http://example.com/1", undefined],
+                    ["http://example.com/2", undefined]
+                ]);
+                expect(ads).toEqual([
+                    expect.objectContaining({ title: "My title" }),
+                    expect.objectContaining({ title: "My title2" })
+                ]);
+
+                if (resultDetailsDelayMs > 0) {
+                    expect(sleepSpy.mock.calls).toEqual([
+                        [resultDetailsDelayMs],
+                        [resultDetailsDelayMs]
+                    ]);
+                } else {
+                    expect(sleepSpy).not.toBeCalled();
+                }
             });
 
             it("should not scrape result details if false", async () => {
@@ -203,7 +236,11 @@ describe.each`
                     isLastPage: true
                 });
 
-                const ads = await search({}, { scrapeResultDetails: false, scraperType });
+                const ads = await search({}, {
+                    scrapeResultDetails: false,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
 
                 expectSearcherCall();
                 expect(scraperSpy).not.toBeCalled();
@@ -218,13 +255,54 @@ describe.each`
                     isLastPage: true
                 });
 
-                const ads = await search({}, { scrapeResultDetails: true, scraperType });
+                const ads = await search({}, {
+                    scrapeResultDetails: true,
+                    resultDetailsDelayMs,
+                    scraperType
+                });
 
                 expectSearcherCall();
                 expect(scraperSpy).not.toBeCalled();
                 expect(ads).toEqual([expect.objectContaining({
                     title: ""
                 })]);
+            });
+        });
+
+        it.each`
+            test                         | value        | expectedDelay
+            ${"default value of 1000"}   | ${undefined} | ${1000}
+            ${"explicitly set to 1000"}  | ${1000}      | ${1000}
+            ${"explicitly set to 5000"}  | ${5000}      | ${5000}
+            ${"explicitly set to 0"}     | ${0}         | ${0}
+        `("should delay between pages based on pageDelayMs ($test)", async ({ value, expectedDelay }) => {
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [new Ad("")],
+                isLastPage: false
+            });
+            activeSearcher.mockResolvedValueOnce({
+                pageResults: [new Ad(""), new Ad("")],
+                isLastPage: false
+            });
+            sleepSpy.mockImplementationOnce(async () => {
+                expect(activeSearcher).toBeCalledTimes(1);
+            });
+
+            const ads = await search({}, {
+                scrapeResultDetails: false,
+                pageDelayMs: value,
+                minResults: 2,
+                scraperType
+            });
+
+            // We shouldn't delay after the last page
+            expect(sleepSpy.mock.calls).toEqual([[expectedDelay]]);
+            expect(ads.length).toBe(3);
+            expect(activeSearcher).toBeCalledTimes(2);
+            allSearchers.forEach(s => {
+                if (s !== activeSearcher) {
+                    expect(s).not.toBeCalled();
+                }
             });
         });
 

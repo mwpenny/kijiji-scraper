@@ -4,7 +4,7 @@
 import { Ad } from "./ad";
 import { APISearcher } from "./backends/api-searcher";
 import { HTMLSearcher } from "./backends/html-searcher";
-import { getScraperOptions, ScraperOptions, ScraperType } from "./helpers";
+import { getScraperOptions, sleep, ScraperOptions, ScraperType } from "./helpers";
 
 // Helper for location and category IDs
 type KijijiIdTreeNode = { id: number };
@@ -60,14 +60,10 @@ export type ResolvedSearchParameters = {
  */
 export type SearchOptions = {
     /**
-     * By default, the details of each query result are scraped in separate,
-     * subsequent requests. To suppress this behavior and return only the
-     * data retrieved by the initial query, set this option to `false`. Note
-     * that ads will lack some information if you do this and `Ad.isScraped()`
-     * will return `false` until `Ad.scrape()` is called to retrieve the
-     * missing information.
+     * Amount of time in milliseconds to wait between scraping each result page.
+     * This is useful to avoid detection and bans from Kijiji. Defaults to 1000.
      */
-    scrapeResultDetails?: boolean;
+    pageDelayMs?: number;
 
     /**
      * Minimum number of ads to fetch (if available). Note that Kijiji results
@@ -83,6 +79,24 @@ export type SearchOptions = {
      * discarded). A negative value indicates no limit.
      */
     maxResults?: number;
+
+    /**
+     * When using the HTML scraper, the details of each query result are scraped in
+     * separate, subsequent requests by default. To suppress this behavior and return
+     * only the data retrieved by the initial query, set this option to `false`. Note
+     * that ads will lack some information if you do this and `Ad.isScraped()` will
+     * will return `false` until `Ad.scrape()` is called to retrieve the missing
+     * information. This option does nothing when using the API scraper (default)
+     */
+    scrapeResultDetails?: boolean;
+
+    /**
+     * When `scrapeResultDetails` is `true`, the amount of time in milliseconds to
+     * wait in between each request for result details. A value of 0 will cause all
+     * such requests to be made at the same time. This is useful to avoid detection
+     * and bans from Kijiji. Defaults to 500.
+     */
+    resultDetailsDelayMs?: number;
 };
 
 /**
@@ -114,7 +128,7 @@ export interface Searcher {
 };
 
 /* Retrieves at least minResults search results from Kijiji using the passed parameters */
-async function getSearchResults(searcher: Searcher, params: ResolvedSearchParameters, minResults: number): Promise<Ad[]> {
+async function getSearchResults(searcher: Searcher, params: ResolvedSearchParameters, options: Required<SearchOptions>): Promise<Ad[]> {
     /* When searching with formSubmit = true, Kijiji will redirect us to a URL
        that the UI uses to encode search parameters. This URL can be modified to
        specify the page number (the only reliable way I have found to do so) */
@@ -122,12 +136,17 @@ async function getSearchResults(searcher: Searcher, params: ResolvedSearchParame
     let pageNum = 1;
 
     try {
-        while (results.length < minResults) {
+        let needResults = options.minResults > 0;
+        while (needResults) {
             const { pageResults, isLastPage } = await searcher.getPageResults(params, pageNum++);
             results.push(...pageResults);
 
-            if (pageResults.length === 0 || isLastPage) {
-                break;
+            needResults = pageResults.length > 0 &&
+                !isLastPage &&
+                results.length < options.minResults;
+
+            if (needResults) {
+                await sleep(options.pageDelayMs);
             }
         }
     } catch (err) {
@@ -187,8 +206,14 @@ function getSearchOptions(options: SearchOptions): Required<SearchOptions> {
     const optionsForSearch = { ...options };
 
     // Option defaults
+    if (optionsForSearch.pageDelayMs === undefined) {
+        optionsForSearch.pageDelayMs = 1000;
+    }
     if (optionsForSearch.scrapeResultDetails === undefined) {
         optionsForSearch.scrapeResultDetails = true;
+    }
+    if (optionsForSearch.resultDetailsDelayMs === undefined) {
+        optionsForSearch.resultDetailsDelayMs = 500;
     }
     if (optionsForSearch.minResults === undefined) {
         optionsForSearch.minResults = 20;
@@ -197,6 +222,8 @@ function getSearchOptions(options: SearchOptions): Required<SearchOptions> {
         optionsForSearch.maxResults = -1;
     }
 
+    ensureIntProp(optionsForSearch, "pageDelayMs");
+    ensureIntProp(optionsForSearch, "resultDetailsDelayMs");
     ensureIntProp(optionsForSearch, "minResults");
     ensureIntProp(optionsForSearch, "maxResults");
     return optionsForSearch as Required<SearchOptions>;
@@ -224,17 +251,25 @@ export function search(params: SearchParameters, options: SearchOptions & Scrape
             : new APISearcher();
 
         // Perform search
-        getSearchResults(searcher, paramsForSearch, optionsForSearch.minResults).then(results => {
+        getSearchResults(searcher, paramsForSearch, optionsForSearch).then(async results => {
             if (optionsForSearch.maxResults >= 0) {
                 results = results.slice(0, optionsForSearch.maxResults);
             }
             if (optionsForSearch.scrapeResultDetails) {
-                // TODO: rate limiting
-                return Promise.all(results.map(ad => {
-                    if (!ad.isScraped()) {
-                        ad.scrape();
+                if (optionsForSearch.resultDetailsDelayMs > 0) {
+                    for (const ad of results) {
+                        if (!ad.isScraped()) {
+                            await ad.scrape();
+                            await sleep(optionsForSearch.resultDetailsDelayMs);
+                        }
                     }
-                })).then(() => results);
+                } else {
+                    await Promise.all(results.map(ad => {
+                        if (!ad.isScraped()) {
+                            ad.scrape();
+                        }
+                    }));
+                }
             }
             return results;
         }).then(resolve, reject);
