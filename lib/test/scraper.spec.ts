@@ -58,7 +58,7 @@ describe.each`
                 "their markup. If you believe this to be the case, please open " +
                 "an issue at: https://github.com/mwpenny/kijiji-scraper/issues"
             );
-            expect(activeScraper).toBeCalledWith(url)
+            expect(activeScraper).not.toBeCalledWith(url)
             allScrapers.forEach(s => {
                 if (s !== activeScraper) {
                     expect(s).not.toBeCalled();
