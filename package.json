@@ -12,7 +12,7 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.21",
+    "@types/cheerio": "^0.22.22",
     "@types/jest": "^26.0.13",
     "@types/node-fetch": "^2.5.7",
     "jest": "^26.4.0",
