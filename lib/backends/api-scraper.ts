@@ -11,7 +11,7 @@ import { AdInfo } from "../scraper";
 const AD_ID_REGEX = /\/(\d+)$/;
 const API_ADS_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
 
-function castAttributeValue(item: CheerioElement, value: string): boolean | number | Date | string {
+function castAttributeValue(item: cheerio.Element, value: string): boolean | number | Date | string {
     // Kijiji only returns strings for attributes. Convert to appropriate types
     const type = (item.attribs.type || "").toLowerCase();
     const localizedLabel = (item.attribs["localized-label"] || "").toLowerCase();
@@ -40,7 +40,7 @@ function parseResponseXML(xml: string): AdInfo | null {
     return scrapeAdElement(adElement[0]);
 }
 
-export function scrapeAdElement(elem: CheerioElement): AdInfo | null {
+export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     const info = new AdInfo();
 
     const $ = cheerio.load(elem);
