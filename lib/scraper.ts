@@ -58,9 +58,9 @@ export async function scrape(url: string, options: ScraperOptions = {}): Promise
 
     const adInfo = await scraper(url);
     if (!adInfo) {
-        throw new Error(
-            `Ad not found or invalid response received from Kijiji for ad at ${url}. ${POSSIBLE_BAD_MARKUP}`
-        );
+        const AdNotScrapedError = new Error(`Ad not found or invalid response received from Kijiji for ad at ${url}. ${POSSIBLE_BAD_MARKUP}`);
+        AdNotScrapedError.name = 'AdNotScrapedError';
+        throw AdNotScrapedError;
     }
     adInfo.url = url;
     return adInfo;
