@@ -12,13 +12,13 @@
     "node-fetch": "^2.6.1"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.22",
+    "@types/cheerio": "^0.22.23",
     "@types/jest": "^26.0.13",
     "@types/node-fetch": "^2.5.7",
     "jest": "^26.4.0",
     "rimraf": "^3.0.2",
     "ts-jest": "^26.3.0",
-    "typescript": "^4.1.2"
+    "typescript": "^4.0.2"
   },
   "scripts": {
     "build": "tsc",
