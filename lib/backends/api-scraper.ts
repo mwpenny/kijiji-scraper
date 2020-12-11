@@ -17,7 +17,7 @@ function isCheerioTagElement(element: cheerio.Element): element is cheerio.TagEl
 
 function castAttributeValue(item: cheerio.Element, value: string): boolean | number | Date | string {
     value = value.trim();
-    if  (!isCheerioTagElement(item)) {
+    if (!isCheerioTagElement(item)) {
         return value;
     }
     // Kijiji only returns strings for attributes. Convert to appropriate types
