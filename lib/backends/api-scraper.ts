@@ -12,17 +12,17 @@ const AD_ID_REGEX = /\/(\d+)$/;
 const API_ADS_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
 
 function isCheerioTagElement(element: cheerio.Element): element is cheerio.TagElement {
-    return (element as cheerio.TagElement).attribs !== undefined;
+    return element.type !== 'text';
 }
 
 function castAttributeValue(item: cheerio.Element, value: string): boolean | number | Date | string {
+    value = value.trim();
     if  (!isCheerioTagElement(item)) {
-        return false;
+        return value;
     }
     // Kijiji only returns strings for attributes. Convert to appropriate types
     const type = (item.attribs.type || "").toLowerCase();
     const localizedLabel = (item.attribs["localized-label"] || "").toLowerCase();
-    value = value.trim();
 
     if (localizedLabel === "yes") {
         return true;
@@ -64,7 +64,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     info.date = new Date(dateElem.text());
 
     $("pic\\:picture pic\\:link[rel='normal']").each((_i, item) => {
-        if  (!isCheerioTagElement(item)) {
+        if (!isCheerioTagElement(item)) {
             return;
         }
         const url = item.attribs.href;
@@ -76,7 +76,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
 
 
     $("attr\\:attribute").each((_i, item) => {
-        if  (!isCheerioTagElement(item)) {
+        if (!isCheerioTagElement(item)) {
             return;
         }
         const name = item.attribs.name;
