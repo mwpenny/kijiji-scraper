@@ -12,7 +12,7 @@ const AD_ID_REGEX = /\/(\d+)$/;
 const API_ADS_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
 
 function isCheerioTagElement(element: cheerio.Element): element is cheerio.TagElement {
-    return element.type !== 'text';
+    return element.type === "tag";
 }
 
 function castAttributeValue(item: cheerio.Element, value: string): boolean | number | Date | string {
