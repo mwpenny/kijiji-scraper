@@ -306,25 +306,44 @@ describe.each`
             });
         });
 
-        it.each`
-            test                      | value        | expectedRequestCount
-            ${"default value of 20"}  | ${undefined} | ${20}
-            ${"explicitly set to 5"}  | ${5}         | ${5}
-            ${"explicitly set to 0"}  | ${0}         | ${0}
-            ${"explicitly set to -1"} | ${-1}        | ${0}
-        `("should stop scraping if minResults ads are found ($test)", async ({ value, expectedRequestCount }) => {
-            activeSearcher.mockResolvedValue({
-                pageResults: [new Ad("")],
-                isLastPage: false
+        describe("minResults", () => {
+            it.each`
+                test                      | value        | expectedRequestCount
+                ${"default value of 20"}  | ${undefined} | ${20}
+                ${"explicitly set to 5"}  | ${5}         | ${5}
+                ${"explicitly set to 0"}  | ${0}         | ${0}
+            `("should stop scraping if minResults ads are found ($test)", async ({ value, expectedRequestCount }) => {
+                activeSearcher.mockResolvedValue({
+                    pageResults: [new Ad("")],
+                    isLastPage: false
+                });
+
+                const ads = await search({}, { scrapeResultDetails: false, minResults: value });
+                expect(ads.length).toBe(expectedRequestCount);
+                expect(activeSearcher).toBeCalledTimes(expectedRequestCount);
+                allSearchers.forEach(s => {
+                    if (s !== activeSearcher) {
+                        expect(s).not.toBeCalled();
+                    }
+                });
             });
 
-            const ads = await search({}, { scrapeResultDetails: false, minResults: value });
-            expect(ads.length).toBe(expectedRequestCount);
-            expect(activeSearcher).toBeCalledTimes(expectedRequestCount);
-            allSearchers.forEach(s => {
-                if (s !== activeSearcher) {
-                    expect(s).not.toBeCalled();
+            it("should scrape until last page if minResults is negative", async () => {
+                for (let i = 0; i < 200; ++i) {
+                    activeSearcher.mockResolvedValueOnce({
+                        pageResults: [new Ad("")],
+                        isLastPage: i === 199
+                    });
                 }
+
+                const ads = await search({}, { scrapeResultDetails: false, minResults: -1 });
+                expect(ads.length).toBe(200);
+                expect(activeSearcher).toBeCalledTimes(200);
+                allSearchers.forEach(s => {
+                    if (s !== activeSearcher) {
+                        expect(s).not.toBeCalled();
+                    }
+                });
             });
         });
 

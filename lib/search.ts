@@ -68,7 +68,8 @@ export type SearchOptions = {
     /**
      * Minimum number of ads to fetch (if available). Note that Kijiji results
      * are returned in pages of up to `20` ads, so if you set this to something
-     * like `29`, up to `40` results may be retrieved.
+     * like `29`, up to `40` results may be retrieved. A negative value indicates
+     * no limit (retrieve as many ads as possible).
      */
     minResults?: number;
 
@@ -133,14 +134,14 @@ async function getSearchResults(searcher: Searcher, params: ResolvedSearchParame
     let pageNum = 1;
 
     try {
-        let needResults = options.minResults > 0;
+        let needResults = options.minResults !== 0;
         while (needResults) {
             const { pageResults, isLastPage } = await searcher.getPageResults(params, pageNum++);
             results.push(...pageResults);
 
             needResults = pageResults.length > 0 &&
                 !isLastPage &&
-                results.length < options.minResults;
+                (results.length < options.minResults || options.minResults < 0);
 
             if (needResults) {
                 await sleep(options.pageDelayMs);
