@@ -22,7 +22,8 @@ function parseResultsXML(xml: string): Ad[] {
     $("ad\\:ad").each((_i, item) => {
         const url = $(item).find("ad\\:link[rel='self-public-website']").attr("href");
         if (!url) {
-            throw new Error(`Result ad has no URL. ${POSSIBLE_BAD_MARKUP}`);
+            // Top and third-party ads have no Kijiji URL
+            return;
         }
 
         const info = scrapeAdElement(item);
