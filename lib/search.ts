@@ -129,9 +129,6 @@ export interface Searcher {
 
 /* Retrieves at least minResults search results from Kijiji using the passed parameters */
 async function getSearchResults(searcher: Searcher, params: ResolvedSearchParameters, options: Required<SearchOptions>): Promise<Ad[]> {
-    /* When searching with formSubmit = true, Kijiji will redirect us to a URL
-       that the UI uses to encode search parameters. This URL can be modified to
-       specify the page number (the only reliable way I have found to do so) */
     const results: Ad[] = [];
     let pageNum = 1;
 
