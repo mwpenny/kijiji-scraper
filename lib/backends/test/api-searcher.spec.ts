@@ -107,23 +107,6 @@ describe("Search result API scraper", () => {
     });
 
     describe("result page scraping", () => {
-        it("should throw error if results page is invalid", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createAdXML({}) });
-
-            try {
-                await search();
-                fail("Expected error while scraping results page");
-            } catch (err) {
-                expect(err.message).toBe(
-                    "Result ad has no URL. It is possible that Kijiji changed their " +
-                    "markup. If you believe this to be the case, please open an issue " +
-                    "at: https://github.com/mwpenny/kijiji-scraper/issues"
-                );
-                validateRequestHeaders();
-                expect(scrapeSpy).not.toBeCalled();
-            }
-        });
-
         it("should throw error if scraping fails", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createAdXML({ url: "http://example.com" }) });
 
@@ -200,6 +183,21 @@ describe("Search result API scraper", () => {
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults.length).toBe(0);
+        });
+
+        it("should skip ads with no URL", async () => {
+            const adInfo = {
+                url: "http://example.com/1",
+                title: "Ad 1",
+                date: new Date(123)
+            };
+            const ad = createAdXML(adInfo).trim();
+
+            fetchSpy.mockResolvedValueOnce({ text: () => createAdXML({}) + ad });
+
+            const { pageResults } = await search();
+            validateRequestHeaders();
+            expect(pageResults).toEqual([expect.objectContaining(adInfo)]);
         });
     });
 });
