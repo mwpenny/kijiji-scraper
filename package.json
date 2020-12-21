@@ -25,7 +25,8 @@
     "clean": "rimraf dist",
     "prepare": "npm run build",
     "test": "jest --config jest.config.js",
-    "test-integration": "jest ./tests/integrationTests.spec.js"
+    "test-integration": "jest ./tests/integrationTests.spec.js",
+    "prepublishOnly": "npm run test"
   },
   "repository": {
     "type": "git",
