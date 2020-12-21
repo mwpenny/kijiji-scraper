@@ -207,23 +207,32 @@ function getSearchOptions(options: SearchOptions): Required<SearchOptions> {
     if (optionsForSearch.pageDelayMs === undefined) {
         optionsForSearch.pageDelayMs = 1000;
     }
+    ensureIntProp(optionsForSearch, "pageDelayMs");
+
     if (optionsForSearch.scrapeResultDetails === undefined) {
         optionsForSearch.scrapeResultDetails = true;
     }
     if (optionsForSearch.resultDetailsDelayMs === undefined) {
         optionsForSearch.resultDetailsDelayMs = 500;
     }
-    if (optionsForSearch.minResults === undefined) {
-        optionsForSearch.minResults = 20;
-    }
+    ensureIntProp(optionsForSearch, "resultDetailsDelayMs");
+
     if (optionsForSearch.maxResults === undefined) {
         optionsForSearch.maxResults = -1;
     }
-
-    ensureIntProp(optionsForSearch, "pageDelayMs");
-    ensureIntProp(optionsForSearch, "resultDetailsDelayMs");
-    ensureIntProp(optionsForSearch, "minResults");
     ensureIntProp(optionsForSearch, "maxResults");
+
+    if (optionsForSearch.minResults === undefined) {
+        if (optionsForSearch.maxResults > 0){
+            optionsForSearch.minResults = optionsForSearch.maxResults;
+        } else {
+            optionsForSearch.minResults = 20;
+        }
+    } else if (optionsForSearch.minResults < 0) {
+        optionsForSearch.minResults = optionsForSearch.maxResults;
+    }
+    ensureIntProp(optionsForSearch, "minResults");
+
     return optionsForSearch as Required<SearchOptions>;
 }
 

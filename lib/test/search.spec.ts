@@ -308,17 +308,19 @@ describe.each`
 
         describe("minResults", () => {
             it.each`
-                test                      | value        | expectedRequestCount
-                ${"default value of 20"}  | ${undefined} | ${20}
-                ${"explicitly set to 5"}  | ${5}         | ${5}
-                ${"explicitly set to 0"}  | ${0}         | ${0}
-            `("should stop scraping if minResults ads are found ($test)", async ({ value, expectedRequestCount }) => {
+                test                                                 | value        | maxResults | expectedRequestCount
+                ${"default value of 20"}                             | ${undefined} | ${-1}      | ${20}
+                ${"explicitly set to 5"}                             | ${5}         | ${-1}      | ${5}
+                ${"explicitly set to 0"}                             | ${0}         | ${-1}      | ${0}
+                ${"use value of maxResults when negative"}           | ${-1}        | ${123}     | ${123}
+                ${"use positive value of maxResults when undefined"} | ${undefined} | ${123}     | ${123}
+            `("should stop scraping if minResults ads are found ($test)", async ({ value, maxResults, expectedRequestCount }) => {
                 activeSearcher.mockResolvedValue({
                     pageResults: [new Ad("")],
                     isLastPage: false
                 });
 
-                const ads = await search({}, { scrapeResultDetails: false, minResults: value });
+                const ads = await search({}, { scrapeResultDetails: false, minResults: value, maxResults });
                 expect(ads.length).toBe(expectedRequestCount);
                 expect(activeSearcher).toBeCalledTimes(expectedRequestCount);
                 allSearchers.forEach(s => {
@@ -359,7 +361,7 @@ describe.each`
             activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: false });
             activeSearcher.mockResolvedValueOnce({ pageResults: [new Ad("")], isLastPage: true });
 
-            const ads = await search({}, { scrapeResultDetails: false, maxResults: value });
+            const ads = await search({}, { scrapeResultDetails: false, minResults: 20, maxResults: value });
 
             expect(ads.length).toBe(expectedResultCount);
             for (let i = 1; i <= 5; ++i) {
