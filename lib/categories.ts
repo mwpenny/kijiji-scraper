@@ -5,7 +5,6 @@
  */
 export const categories = {
     id: 0,
-    KIJIJI_VILLAGE: { id: 36611001 },
     BUY_AND_SELL: {
         id: 10,
         ARTS_AND_COLLECTIBLES: { id: 12 },
@@ -260,9 +259,11 @@ export const categories = {
             NINTENDO_SWITCH: { id: 33035001 },
             NINTENDO_WII: { id: 626 },
             NINTENDO_WII_U: { id: 14654002 },
+            SONY_PLAYSTATION_5: { id: 39730002 },
             SONY_PLAYSTATION_4: { id: 792 },
             SONY_PLAYSTATION_3: { id: 627 },
             SONY_PSP_AND_VITA: { id: 621 },
+            XBOX_SERIES_X_AND_S: { id: 39730001 },
             XBOX_360: { id: 622 },
             XBOX_ONE: { id: 793 },
             OLDER_GENERATION: { id: 623 },
