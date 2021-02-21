@@ -68,7 +68,8 @@ export type SearchOptions = {
     /**
      * Minimum number of ads to fetch (if available). Note that Kijiji results
      * are returned in pages of up to `20` ads, so if you set this to something
-     * like `29`, up to `40` results may be retrieved.
+     * like `29`, up to `40` results may be retrieved. A negative value indicates
+     * no limit (retrieve as many ads as possible).
      */
     minResults?: number;
 
@@ -129,21 +130,18 @@ export interface Searcher {
 
 /* Retrieves at least minResults search results from Kijiji using the passed parameters */
 async function getSearchResults(searcher: Searcher, params: ResolvedSearchParameters, options: Required<SearchOptions>): Promise<Ad[]> {
-    /* When searching with formSubmit = true, Kijiji will redirect us to a URL
-       that the UI uses to encode search parameters. This URL can be modified to
-       specify the page number (the only reliable way I have found to do so) */
     const results: Ad[] = [];
     let pageNum = 1;
 
     try {
-        let needResults = options.minResults > 0;
+        let needResults = options.minResults !== 0;
         while (needResults) {
             const { pageResults, isLastPage } = await searcher.getPageResults(params, pageNum++);
             results.push(...pageResults);
 
             needResults = pageResults.length > 0 &&
                 !isLastPage &&
-                results.length < options.minResults;
+                (results.length < options.minResults || options.minResults < 0);
 
             if (needResults) {
                 await sleep(options.pageDelayMs);
@@ -209,23 +207,32 @@ function getSearchOptions(options: SearchOptions): Required<SearchOptions> {
     if (optionsForSearch.pageDelayMs === undefined) {
         optionsForSearch.pageDelayMs = 1000;
     }
+    ensureIntProp(optionsForSearch, "pageDelayMs");
+
     if (optionsForSearch.scrapeResultDetails === undefined) {
         optionsForSearch.scrapeResultDetails = true;
     }
     if (optionsForSearch.resultDetailsDelayMs === undefined) {
         optionsForSearch.resultDetailsDelayMs = 500;
     }
-    if (optionsForSearch.minResults === undefined) {
-        optionsForSearch.minResults = 20;
-    }
+    ensureIntProp(optionsForSearch, "resultDetailsDelayMs");
+
     if (optionsForSearch.maxResults === undefined) {
         optionsForSearch.maxResults = -1;
     }
-
-    ensureIntProp(optionsForSearch, "pageDelayMs");
-    ensureIntProp(optionsForSearch, "resultDetailsDelayMs");
-    ensureIntProp(optionsForSearch, "minResults");
     ensureIntProp(optionsForSearch, "maxResults");
+
+    if (optionsForSearch.minResults === undefined) {
+        if (optionsForSearch.maxResults > 0){
+            optionsForSearch.minResults = optionsForSearch.maxResults;
+        } else {
+            optionsForSearch.minResults = 20;
+        }
+    } else if (optionsForSearch.minResults < 0) {
+        optionsForSearch.minResults = optionsForSearch.maxResults;
+    }
+    ensureIntProp(optionsForSearch, "minResults");
+
     return optionsForSearch as Required<SearchOptions>;
 }
 

@@ -12,7 +12,7 @@ import { API_REQUEST_HEADERS, BANNED, POSSIBLE_BAD_MARKUP } from "../constants";
 import { PageResults, ResolvedSearchParameters } from "../search";
 
 const API_SEARCH_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
-const LAST_PAGE_REGEX = /<types:link rel="next" href=".+"\/>/;
+const NEXT_PAGE_REGEX = /<types:link rel="next" href=".+"\/>/;
 
 function parseResultsXML(xml: string): Ad[] {
     const adResults: Ad[] = [];
@@ -58,7 +58,7 @@ export class APISearcher {
             })
             .then(body => ({
                 pageResults: parseResultsXML(body),
-                isLastPage: body.match(LAST_PAGE_REGEX) === null
+                isLastPage: body.match(NEXT_PAGE_REGEX) === null
             }));
     }
 }
