@@ -36,7 +36,7 @@ export type SearchParameters = {
     /**
      * Type of ad to return. Leave undefined for both
      */
-    adType?: "OFFER" | "WANTED";
+    adType?: string;
 
     /**
      * Other parameters, specific to the category. Use browser developer

@@ -206,7 +206,7 @@ Searches are performed using the `search()` function:
             |------------|------|-------------------------------------------------------------|
             |`minPrice`  |Number|Minimum price of returned items                              |
             |`maxPrice`  |Number|Maximum price of returned items                              |
-            |`adType`    |String|Type of ad (`"OFFER"`, `"WANTED"`, or `undefined` - for both)|
+            |`adType`    |String|Type of ad (`"OFFER"`, `"WANTED"`, or `undefined` - for both). If using the `"api"` `scraperType` then `"OFFERED"` must be used instead of `"OFFER"`.|
 
         * Some known parameters available when using the `"api"` (default) `scraperType`:
 
