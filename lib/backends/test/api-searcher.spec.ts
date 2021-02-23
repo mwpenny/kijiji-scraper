@@ -167,7 +167,7 @@ describe("Search result API scraper", () => {
                 date: new Date()
             });
             if (!isLastPage) {
-                mockResponse += '<types:link rel="next" href="http://example.com/nextpage"/>';
+                mockResponse += '<types:paging><types:link rel="next" href="http://example.com/nextpage"/></types:paging>';
             }
             fetchSpy.mockResolvedValueOnce({ text: () => mockResponse });
 
