@@ -107,15 +107,6 @@ describe("Ad API scraper", () => {
         }
     });
 
-    it("should fail with invalid URL", async () => {
-        try {
-            await scraper("http://example.com")
-            fail("Expected error for invalid URL");
-        } catch (err) {
-            expect(err.message).toBe("Invalid Kijiji ad URL. Ad URLs must end in /some-ad-id.");
-        }
-    });
-
     it.each`
         test                     | xml
         ${"Bad markup"}          | ${"Bad markup"}
@@ -127,6 +118,33 @@ describe("Ad API scraper", () => {
         const adInfo = await scraper(FAKE_VALID_AD_URL);
         validateRequest();
         expect(adInfo).toBeNull();
+    });
+
+    describe("URL parsing", () => {
+        it("should fail with invalid URL", async () => {
+            try {
+                await scraper("not a URL")
+                fail("Expected error for invalid URL");
+            } catch (err) {
+                expect(err.message).toBe("Invalid URL: not a URL");
+            }
+        });
+
+        it("should fail with URL that does not end in ad ID", async () => {
+            try {
+                await scraper("http://example.com")
+                fail("Expected error for invalid URL");
+            } catch (err) {
+                expect(err.message).toBe("Invalid Kijiji ad URL. Ad URLs must end in /some-ad-id.");
+            }
+        });
+
+        it("should ignore query string", async () => {
+            mockResponse(createAdXML({}));
+
+            await scraper(`${FAKE_VALID_AD_URL}?key=value`);
+            validateRequest();
+        });
     });
 
     describe("valid markup", () => {

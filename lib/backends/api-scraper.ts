@@ -101,7 +101,9 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
 
 /* Queries the Kijiji mobile API for the ad at the passed URL */
 export function scrapeAPI(url: string): Promise<AdInfo | null> {
-    const adIdMatch = url.match(AD_ID_REGEX);
+    const parsedURL = new URL(url);
+    const adIdMatch = parsedURL.pathname.match(AD_ID_REGEX);
+
     if (adIdMatch === null) {
         throw new Error("Invalid Kijiji ad URL. Ad URLs must end in /some-ad-id.");
     }
