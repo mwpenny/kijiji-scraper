@@ -57,13 +57,13 @@ Returns a `Promise` which resolves to an `Ad` object containing the ad's informa
 const kijiji = require("kijiji-scraper");
 
 // Scrape using returned promise
-kijiji.Ad.Get("<Kijiji ad URL>").then(function(ad) {
+kijiji.Ad.Get("<Kijiji ad URL>").then(ad => {
     // Use the ad object
     console.log(ad.title);
 }).catch(console.error);
 
 // Scrape using optional callback paramater
-kijiji.Ad.Get("<Kijiji ad URL>", function(err, ad) {
+kijiji.Ad.Get("<Kijiji ad URL>", {}, (err, ad) => {
     if (!err) {
         // Use the ad object
         console.log(ad.title);
@@ -143,7 +143,7 @@ ad.scrape().then(() => {
 }).catch(console.error);
 
 // Scrape using optional callback paramater
-ad.scrape((err) => {
+ad.scrape({}, err => {
     if (!err) {
         // Use the ad object
         console.log(ad.isScraped()); // true
