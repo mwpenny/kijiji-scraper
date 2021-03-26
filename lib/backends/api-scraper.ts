@@ -11,15 +11,20 @@ import { AdInfo } from "../scraper";
 const AD_ID_REGEX = /\/(\d+)$/;
 const API_ADS_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
 
-function castAttributeValue(item: cheerio.Cheerio, value: string): boolean | number | Date | string {
-    // Kijiji only returns strings for attributes. Convert to appropriate types
-    const type = (item.attr("type") || "").toLowerCase();
-    const localizedLabel = (item.attr("localized-label") || "").toLowerCase();
-    value = value.trim();
+function castAttributeValue(item: cheerio.Cheerio): boolean | number | Date | string | undefined {
+    const valueElem = item.find("attr\\:value");
+    if (valueElem.length === 0) {
+        return undefined;
+    }
 
-    if (localizedLabel === "yes") {
+    const type = (item.attr("type") || "").toLowerCase();
+    const value = valueElem.text().trim();
+    const localizedValue = (valueElem.attr("localized-label") || "").toLowerCase();
+
+    // Kijiji only returns strings for attributes. Convert to appropriate types
+    if (localizedValue === "yes") {
         return true;
-    } else if (localizedLabel === "no") {
+    } else if (localizedValue === "no") {
         return false;
     } else if (isNumber(value)) {
         return Number(value);
@@ -69,9 +74,9 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     $("attr\\:attribute").each((_i, item) => {
         const cheerioItem = $(item);
         const name = cheerioItem.attr("name");
-        const value = cheerioItem.find("attr\\:value").text();
-        if (name && value) {
-            info.attributes[name] = castAttributeValue(cheerioItem, value);
+        const value = castAttributeValue(cheerioItem);
+        if (name && value !== undefined) {
+            info.attributes[name] = value;
         }
     });
 

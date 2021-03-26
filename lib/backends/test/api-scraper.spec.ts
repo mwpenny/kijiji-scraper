@@ -51,12 +51,13 @@ describe("Ad API scraper", () => {
         return `
             <attr:attribute
                 name="${name}"
-                ${typeof value === "boolean" ? `localized-label=${value ? "Yes" : "No"}` : ""}
                 ${value instanceof Date ? 'type="DATE"' : ""}
             >
                 ${value !== undefined ?
                     `
-                        <attr:value>
+                        <attr:value
+                            ${typeof value === "boolean" ? `localized-label=${value ? "Yes" : "No"}` : ""}
+                        >
                         ${
                             value instanceof Date ? value.toISOString() :
                             typeof value === "string" ? value :
@@ -264,6 +265,7 @@ describe("Ad API scraper", () => {
             ${"float"}         | ${1.21}
             ${"date"}          | ${new Date("2020-09-06T20:52:47.474Z")}
             ${"string"}        | ${"hello"}
+            ${"empty string"}  | ${""}
         `("should scrape attribute ($test)", async ({ value }) => {
             mockResponse(createAdXML({
                 title: "My ad title",
