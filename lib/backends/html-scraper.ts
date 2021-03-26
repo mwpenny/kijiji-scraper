@@ -8,15 +8,26 @@ import { BANNED, HTML_REQUEST_HEADERS } from "../constants";
 import { cleanAdDescription, getLargeImageURL, isNumber } from "../helpers";
 import { AdInfo } from "../scraper";
 
-function castAttributeValue(value: string): boolean | number | Date | string {
-    // Kijiji only returns strings. Convert to appropriate types
-    value = value.trim();
+function castAttributeValue(attr: any): boolean | number | Date | string | undefined {
+    let value = attr.machineValue;
+    if (typeof value !== "string") {
+        return undefined;
+    }
 
+    value = value.trim();
+    const localizedValue = (attr.localeSpecificValues?.en?.value || "").toLowerCase();
+
+    // Kijiji only returns strings. Convert to appropriate types
     if (value.toLowerCase() === "true") {
         return true;
     } else if (value.toLowerCase() === "false") {
         return false;
     } else if (isNumber(value)) {
+        // Numeric values are sometimes inaccurate. For example, numberbathrooms
+        // is multipled by 10. Prefer localized version if it is also a number.
+        if (isNumber(localizedValue)) {
+            return Number(localizedValue);
+        }
         return Number(value);
     } else if (!isNaN(Date.parse(value))) {
         return new Date(value);
@@ -53,8 +64,10 @@ function parseResponseHTML(html: string): AdInfo | null {
         }
     });
     (adData.VIP.adAttributes || []).forEach((a: any) => {
-        if (typeof a.machineKey === "string" && typeof a.machineValue === "string") {
-            info.attributes[a.machineKey] = castAttributeValue(a.machineValue);
+        const name = a.machineKey;
+        const value = castAttributeValue(a);
+        if (typeof name === "string" && value !== undefined) {
+            info.attributes[name] = value;
         }
     });
 
