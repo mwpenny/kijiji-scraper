@@ -36,6 +36,7 @@ describe("Helpers", () => {
         ${" "}        | ${false}
         ${"abc123"}   | ${false}
         ${"1.2.3"}    | ${false}
+        ${"4 1/2"}    | ${false}
         ${"Infinity"} | ${false}
         ${"abc"}      | ${false}
     `("isNumber should detect numbers (input='$input')", ({ input, expectedResult }) => {

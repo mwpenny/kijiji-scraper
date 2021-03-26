@@ -22,6 +22,7 @@ describe("Ad HTML scraper", () => {
             "http://example.com",
             {
                 headers: {
+                    "Accept-Language": "en-CA",
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:79.0) Gecko/20100101 Firefox/79.0"
                 }
             }
@@ -192,40 +193,75 @@ describe("Ad HTML scraper", () => {
             getLargeImageURLSpy.mockRestore();
         });
 
-        it.each`
-            test               | value                         | expectedValue
-            ${"true boolean"}  | ${"true"}                     | ${true}
-            ${"false boolean"} | ${"false"}                    | ${false}
-            ${"integer"}       | ${"123"}                      | ${123}
-            ${"float"}         | ${"1.21"}                     | ${1.21}
-            ${"date"}          | ${"2020-09-06T20:52:47.474Z"} | ${new Date("2020-09-06T20:52:47.474Z")}
-            ${"string"}        | ${"hello"}                    | ${"hello"}
-        `("should scrape attribute ($test)", async ({ value, expectedValue }) => {
-            mockResponse(createAdHTML({
-                config: {
-                    adInfo: {},
-                    VIP: {
-                        adAttributes: [
-                            // Invalid
-                            {},
-                            { machineKey: 123 },
-                            { machineValue: 456 },
-                            { machineKey: 123, machineValue: 456 },
-                            { machineKey: "invalid", machineValue: 456 },
-                            { machineKey: 123, machineValue: "invalid" },
+        describe("attribute scraping", () => {
+            it.each`
+                test               | value                         | expectedValue
+                ${"undefined"}     | ${undefined}                  | ${undefined}
+                ${"true boolean"}  | ${"true"}                     | ${true}
+                ${"false boolean"} | ${"false"}                    | ${false}
+                ${"integer"}       | ${"123"}                      | ${123}
+                ${"float"}         | ${"1.21"}                     | ${1.21}
+                ${"date"}          | ${"2020-09-06T20:52:47.474Z"} | ${new Date("2020-09-06T20:52:47.474Z")}
+                ${"string"}        | ${"hello"}                    | ${"hello"}
+                ${"empty string"}  | ${""}                         | ${""}
+            `("should scrape attribute ($test)", async ({ value, expectedValue }) => {
+                mockResponse(createAdHTML({
+                    config: {
+                        adInfo: {},
+                        VIP: {
+                            adAttributes: [
+                                // Invalid
+                                {},
+                                { machineKey: 123 },
+                                { machineValue: 456 },
+                                { machineKey: 123, machineValue: 456 },
+                                { machineKey: "invalid", machineValue: 456 },
+                                { machineKey: 123, machineValue: "invalid" },
 
-                            // Valid
-                            { machineKey: "myAttr", machineValue: value }
-                        ]
+                                // Valid
+                                { machineKey: "myAttr", machineValue: value }
+                            ]
+                        }
                     }
-                }
-            }));
+                }));
 
-            const adInfo = await scraper("http://example.com");
-            validateRequest();
-            expect(adInfo).not.toBeNull();
-            expect(adInfo!.attributes).toEqual({
-                myAttr: expectedValue
+                const adInfo = await scraper("http://example.com");
+                validateRequest();
+                expect(adInfo).not.toBeNull();
+                expect(adInfo!.attributes).toEqual({
+                    myAttr: expectedValue
+                });
+            });
+
+            it.each`
+                test                               | value    | localeSpecificValues       | expectedValue
+                ${"localized integer"}             | ${"15"}  | ${{ en: { value: "1.5" }}} | ${1.5}
+                ${"localized float"}               | ${"2.3"} | ${{ en: { value: "23" }}}  | ${23}
+                ${"non-numeric localized integer"} | ${"4"}   | ${{ en: { value: "hi" }}}  | ${4}
+                ${"non-numeric localized float"}   | ${"8.1"} | ${{ en: { value: "bye" }}} | ${8.1}
+                ${"no locale-specific values"}     | ${"123"} | ${undefined}               | ${123}
+                ${"no English localization"}       | ${"456"} | ${{}}                      | ${456}
+                ${"no English value"}              | ${"789"} | ${{ en: {} }}              | ${789}
+            `("should scrape numeric attributes with localization ($test)", async ({ value, localeSpecificValues, expectedValue }) => {
+                mockResponse(createAdHTML({
+                    config: {
+                        adInfo: {},
+                        VIP: {
+                            adAttributes: [{
+                                machineKey: "myAttr",
+                                machineValue: value,
+                                localeSpecificValues
+                            }]
+                        }
+                    }
+                }));
+
+                const adInfo = await scraper("http://example.com");
+                validateRequest();
+                expect(adInfo).not.toBeNull();
+                expect(adInfo!.attributes).toEqual({
+                    myAttr: expectedValue
+                });
             });
         });
 

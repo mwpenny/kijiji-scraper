@@ -27,6 +27,11 @@ function castAttributeValue(item: cheerio.Cheerio): boolean | number | Date | st
     } else if (localizedValue === "no") {
         return false;
     } else if (isNumber(value)) {
+        // Numeric values are sometimes inaccurate. For example, numberbathrooms
+        // is multipled by 10. Prefer localized version if it is also a number.
+        if (isNumber(localizedValue)) {
+            return Number(localizedValue);
+        }
         return Number(value);
     } else if (type === "date") {
         return new Date(value);

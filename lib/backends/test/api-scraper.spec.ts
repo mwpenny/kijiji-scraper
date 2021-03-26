@@ -19,12 +19,17 @@ describe("Ad API scraper", () => {
         });
     };
 
+    type MockAdAttribute = {
+        value: any;
+        localizedValue?: string;
+    };
+
     type MockAdInfo = {
         title?: string;
         description?: string;
         date?: Date;
         images?: string[];
-        attributes?: any,
+        attributes?: { [name: string]: MockAdAttribute };
         price?: string;
         location?: string;
         type?: string;
@@ -47,7 +52,9 @@ describe("Ad API scraper", () => {
         );
     }
 
-    const serializeAttribute = (name: string, value: any) => {
+    const serializeAttribute = (name: string, attr: MockAdAttribute) => {
+        const { value, localizedValue } = attr;
+
         return `
             <attr:attribute
                 name="${name}"
@@ -56,7 +63,11 @@ describe("Ad API scraper", () => {
                 ${value !== undefined ?
                     `
                         <attr:value
-                            ${typeof value === "boolean" ? `localized-label=${value ? "Yes" : "No"}` : ""}
+                            ${localizedValue ?
+                                `localized-label=${localizedValue}`
+                            : typeof value === "boolean" ?
+                                `localized-label=${value ? "Yes" : "No"}`
+                            : ""}
                         >
                         ${
                             value instanceof Date ? value.toISOString() :
@@ -256,31 +267,57 @@ describe("Ad API scraper", () => {
             getLargeImageURLSpy.mockRestore();
         });
 
-        it.each`
-            test               | value
-            ${"undefined"}     | ${undefined}
-            ${"true boolean"}  | ${true}
-            ${"false boolean"} | ${false}
-            ${"integer"}       | ${123}
-            ${"float"}         | ${1.21}
-            ${"date"}          | ${new Date("2020-09-06T20:52:47.474Z")}
-            ${"string"}        | ${"hello"}
-            ${"empty string"}  | ${""}
-        `("should scrape attribute ($test)", async ({ value }) => {
-            mockResponse(createAdXML({
-                title: "My ad title",
-                description: "My ad description",
-                date: new Date(),
-                attributes: {
-                    myAttr: value
-                }
-            }));
+        describe("attribute scraping", () => {
+            it.each`
+                test               | value
+                ${"undefined"}     | ${undefined}
+                ${"true boolean"}  | ${true}
+                ${"false boolean"} | ${false}
+                ${"integer"}       | ${123}
+                ${"float"}         | ${1.21}
+                ${"date"}          | ${new Date("2020-09-06T20:52:47.474Z")}
+                ${"string"}        | ${"hello"}
+                ${"empty string"}  | ${""}
+            `("should scrape attribute ($test)", async ({ value }) => {
+                mockResponse(createAdXML({
+                    title: "My ad title",
+                    description: "My ad description",
+                    date: new Date(),
+                    attributes: {
+                        myAttr: { value }
+                    }
+                }));
 
-            const adInfo = await scraper(FAKE_VALID_AD_URL);
-            validateRequest();
-            expect(adInfo).not.toBeNull();
-            expect(adInfo!.attributes).toEqual({
-                myAttr: value
+                const adInfo = await scraper(FAKE_VALID_AD_URL);
+                validateRequest();
+                expect(adInfo).not.toBeNull();
+                expect(adInfo!.attributes).toEqual({
+                    myAttr: value
+                });
+            });
+
+            it.each`
+                test                               | attr                                      | expected
+                ${"localized integer"}             | ${{ value: 15, localizedValue: "1.5" }}}  | ${1.5}
+                ${"localized float"}               | ${{ value: 2.3, localizedValue: "23" }}}  | ${23}
+                ${"non-numeric localized integer"} | ${{ value: 4, localizedValue: "hi" }}}    | ${4}
+                ${"non-numeric localized float"}   | ${{ value: 8.1, localizedValue: "bye" }}} | ${8.1}
+            `("should scrape numeric attributes with localization ($test)", async ({ attr, expected }) => {
+                mockResponse(createAdXML({
+                    title: "My ad title",
+                    description: "My ad description",
+                    date: new Date(),
+                    attributes: {
+                        myAttr: attr
+                    }
+                }));
+
+                const adInfo = await scraper(FAKE_VALID_AD_URL);
+                validateRequest();
+                expect(adInfo).not.toBeNull();
+                expect(adInfo!.attributes).toEqual({
+                    myAttr: expected
+                });
             });
         });
 
