@@ -132,6 +132,24 @@ describe("Ad API scraper", () => {
         expect(adInfo).toBeNull();
     });
 
+    it("should report API error", async () => {
+        mockResponse(`
+            <api-errors>
+                <api-error>
+                    <message>Scraped knee!</message>
+                </api-error>
+            </api-errors>
+        `);
+
+        try {
+            await scraper(FAKE_VALID_AD_URL);
+            fail("Expected API error");
+        } catch (error) {
+            validateRequest();
+            expect(error.message).toBe("Kijiji returned error: Scraped knee!");
+        }
+    });
+
     describe("URL parsing", () => {
         it("should fail with invalid URL", async () => {
             try {
