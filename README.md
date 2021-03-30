@@ -34,7 +34,7 @@ This class encapsulates a Kijiji ad and its properties. It also handles retrievi
 
 The image URL given in `image` is the featured image for the ad. The image URLs given in `images` are all of the images associated with the ad.
 
-**Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the [`Ad.isScraped()`](#adisscraped) and [`Ad.scrape()`](#adscrapeoptions-callback) method documentation below for more information on this.
+> **Note:** If the ad has not been scraped automatically, some of these properties may be null or empty. This happens when an `Ad` object is created manually using the constructor or by performing a search with the `scrapeResultDetails` option set to `false`. See the [`Ad.isScraped()`](#adisscraped) and [`Ad.scrape()`](#adscrapeoptions-callback) method documentation below for more information on this.
 
 #### Methods
 
@@ -241,6 +241,8 @@ Searches are performed using the `search()` function:
 ###### Return value
 
 Returns a `Promise` which resolves to an array of search result `Ad` objects.
+
+> **Note:** Ads may not appear in search results (or the Kijiji website, for that matter) for a short time after they are created (usually no more than 1 minute). This means that when searching, you are not guaranteed to receive extremely recent ads. Such ads will be returned in future searches but their `date` property will reflect the time that they were actually created.
 
 ##### Example usage
 ```js
