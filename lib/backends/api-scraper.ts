@@ -42,8 +42,13 @@ function castAttributeValue(item: cheerio.Cheerio): boolean | number | Date | st
 /* Parses the XML of a Kijiji ad for its important information */
 function parseResponseXML(xml: string): AdInfo | null {
     const $ = cheerio.load(xml);
-    const adElement = $("ad\\:ad").get();
 
+    const apiError = $("api-error > message").text();
+    if (apiError) {
+        throw new Error(`Kijiji returned error: ${apiError}`);
+    }
+
+    const adElement = $("ad\\:ad").get();
     if (adElement.length !== 1) {
         return null;
     }
@@ -55,7 +60,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
 
     const $ = cheerio.load(elem);
     const titleElem = $("ad\\:title");
-    const dateElem = $("ad\\:creation-date-time");
+    const dateElem = $("ad\\:start-date-time");
 
     // We can reasonably expect these to be present
     if (titleElem.length === 0 || dateElem.length === 0) {

@@ -26,7 +26,7 @@ describe("Search result API scraper", () => {
             <ad:ad>
                 ${info.url ? `<ad:link rel="self-public-website" href="${info.url}"></ad:link>` : ""}
                 ${info.title ? `<ad:title>${info.title}</ad:title>` : ""}
-                ${info.date ? `<ad:creation-date-time>${info.date.toISOString()}</ad:creation-date-time>` : ""}
+                ${info.date ? `<ad:start-date-time>${info.date.toISOString()}</ad:start-date-time>` : ""}
             </ad:ad>
         `;
     };

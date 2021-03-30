@@ -87,7 +87,7 @@ describe("Ad API scraper", () => {
             <ad:ad>
                 ${info.title ? `<ad:title>${info.title}</ad:title>` : ""}
                 ${info.description ? `<ad:description>${info.description}</ad:description>` : ""}
-                ${info.date ? `<ad:creation-date-time>${info.date.toISOString()}</ad:creation-date-time>` : ""}
+                ${info.date ? `<ad:start-date-time>${info.date.toISOString()}</ad:start-date-time>` : ""}
                 <pic:pictures>
                     ${(info.images ? info.images.map(url => `<pic:picture><pic:link rel="normal" href="${url}"></pic:picture>`) : []).join("\n")}
                 </pic:pictures>
@@ -130,6 +130,24 @@ describe("Ad API scraper", () => {
         const adInfo = await scraper(FAKE_VALID_AD_URL);
         validateRequest();
         expect(adInfo).toBeNull();
+    });
+
+    it("should report API error", async () => {
+        mockResponse(`
+            <api-errors>
+                <api-error>
+                    <message>Scraped knee!</message>
+                </api-error>
+            </api-errors>
+        `);
+
+        try {
+            await scraper(FAKE_VALID_AD_URL);
+            fail("Expected API error");
+        } catch (error) {
+            validateRequest();
+            expect(error.message).toBe("Kijiji returned error: Scraped knee!");
+        }
     });
 
     describe("URL parsing", () => {
