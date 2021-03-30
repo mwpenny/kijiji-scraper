@@ -60,7 +60,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
 
     const $ = cheerio.load(elem);
     const titleElem = $("ad\\:title");
-    const dateElem = $("ad\\:creation-date-time");
+    const dateElem = $("ad\\:start-date-time");
 
     // We can reasonably expect these to be present
     if (titleElem.length === 0 || dateElem.length === 0) {
