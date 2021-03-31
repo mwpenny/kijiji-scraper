@@ -44,6 +44,11 @@ export class AdInfo {
      * The ad's URL
      */
     url: string = "";
+
+    /**
+     * Unique identifier of the ad
+     */
+    id: string = "";
 };
 
 /* Scrapes the passed Kijiji ad URL */
