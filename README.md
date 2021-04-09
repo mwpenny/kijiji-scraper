@@ -31,6 +31,7 @@ This class encapsulates a Kijiji ad and its properties. It also handles retrievi
 |`images`      |String[]|Array of URLs of the ad's images                     |
 |`attributes`  |Object  |Properties specific to the category of the scraped ad|
 |`url`         |String  |The ad's url                                         |
+|`id`          |String  |Unique identifier of the ad                          |
 
 The image URL given in `image` is the featured image for the ad. The image URLs given in `images` are all of the images associated with the ad.
 

@@ -53,9 +53,20 @@ function parseResponseHTML(html: string): AdInfo | null {
     }
 
     adData = adData.config;
-    info.title = adData.adInfo.title;
+
+    const adId = adData.VIP.adId;
+    const adTitle = adData.adInfo.title;
+    const adDateMs = adData.VIP.sortingDate;
+
+    // We can reasonably expect these to be present
+    if (adId === undefined || adTitle === undefined || adDateMs === undefined) {
+        return null;
+    }
+
+    info.id = adId.toString();
+    info.title = adTitle;
     info.description = cleanAdDescription(adData.VIP.description || "");
-    info.date = new Date(adData.VIP.sortingDate);
+    info.date = new Date(adDateMs);
     info.image = getLargeImageURL(adData.adInfo.sharingImageUrl || "");
 
     (adData.VIP.media || []).forEach((m: any) => {

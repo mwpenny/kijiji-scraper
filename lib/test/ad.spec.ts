@@ -38,6 +38,7 @@ describe("Kijiji Ad", () => {
             ${"image"}        | ${"http://example.com/someimage"}
             ${"images"}       | ${["http://example.com/image1", "http://example.com/image2"]}
             ${"attributes"}   | ${{ key1: "val1", key2: 123 }}
+            ${"id"}           | ${"456"}
         `("should accept user-provided ad properties ($property=$value)", ({ property, value }) => {
             const ad = new Ad("http://example.com", { [property]: value });
             validateAdValues(ad, {
@@ -79,7 +80,7 @@ describe("Kijiji Ad", () => {
     });
 
     describe("string representation", () => {
-        it("should only display URL if ad has no properties", () => {
+        it("should display only URL if ad has no properties", () => {
             const ad = new Ad("http://example.com");
             expect(ad.toString()).toBe("http://example.com\r\n");
         });
@@ -180,7 +181,8 @@ describe("Kijiji Ad", () => {
                     price: "Free",
                     seller: "Kijiji"
                 },
-                url: "http://example.com"
+                url: "http://example.com",
+                id: "123"
             };
             scraperSpy.mockResolvedValue(mockAdInfo as scraper.AdInfo);
 
@@ -238,7 +240,8 @@ describe("Kijiji Ad", () => {
                 image: "an image",
                 images: ["supplemental image"],
                 attributes: { type: "Wanted" },
-                url: "http://example.com"
+                url: "http://example.com",
+                id: "123"
             };
             const callback = jest.fn();
             scraperSpy.mockResolvedValue(mockAdInfo);

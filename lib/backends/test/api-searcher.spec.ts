@@ -17,13 +17,14 @@ describe("Search result API scraper", () => {
 
     type MockAdInfo = {
         url?: string;
+        id?: string;
         title?: string;
         date?: Date;
     };
 
     const createAdXML = (info: MockAdInfo) => {
         return `
-            <ad:ad>
+            <ad:ad ${info.id ? `id="${info.id}"` : ""}>
                 ${info.url ? `<ad:link rel="self-public-website" href="${info.url}"></ad:link>` : ""}
                 ${info.title ? `<ad:title>${info.title}</ad:title>` : ""}
                 ${info.date ? `<ad:start-date-time>${info.date.toISOString()}</ad:start-date-time>` : ""}
@@ -127,11 +128,13 @@ describe("Search result API scraper", () => {
         it("should scrape each result ad", async () => {
             const ad1Info = {
                 url: "http://example.com/1",
+                id: "1",
                 title: "Ad 1",
                 date: new Date(123)
             };
             const ad2Info = {
                 url: "http://example.com/2",
+                id: "2",
                 title: "Ad 2",
                 date: new Date(456)
             };
@@ -163,6 +166,7 @@ describe("Search result API scraper", () => {
         `("should detect last page (isLastPage=$isLastPage)", async ({ isLastPage }) => {
             let mockResponse = createAdXML({
                 url: "http://example.com",
+                id: "123",
                 title: "My ad",
                 date: new Date()
             });
@@ -188,6 +192,7 @@ describe("Search result API scraper", () => {
         it("should skip ads with no URL", async () => {
             const adInfo = {
                 url: "http://example.com/1",
+                id: "1",
                 title: "Ad 1",
                 date: new Date(123)
             };

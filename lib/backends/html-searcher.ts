@@ -66,6 +66,8 @@ function parseResultsHTML(html: string): Ad[] {
         const path = $(item).find("a.title").attr("href");
         const url = KIJIJI_BASE_URL + path;
         const info: Partial<AdInfo> = {
+            id: $(item).data("listing-id")?.toString() || "",
+
             title: $(item).find("a.title").text().trim(),
 
             image: (

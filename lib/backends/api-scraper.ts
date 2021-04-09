@@ -59,14 +59,16 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     const info = new AdInfo();
 
     const $ = cheerio.load(elem);
+    const adId = $("ad\\:ad").attr("id");
     const titleElem = $("ad\\:title");
     const dateElem = $("ad\\:start-date-time");
 
     // We can reasonably expect these to be present
-    if (titleElem.length === 0 || dateElem.length === 0) {
+    if (adId === undefined || titleElem.length === 0 || dateElem.length === 0) {
         return null;
     }
 
+    info.id = adId;
     info.title = titleElem.text();
     info.description = cleanAdDescription($("ad\\:description").html() || "");
     info.date = new Date(dateElem.text());
