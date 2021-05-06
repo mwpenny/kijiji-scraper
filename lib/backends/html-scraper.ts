@@ -29,7 +29,7 @@ function castAttributeValue(attr: any): boolean | number | Date | string | undef
             return Number(localizedValue);
         }
         return Number(value);
-    } else if (!isNaN(Date.parse(value))) {
+    } else if (!isNaN(Date.parse(value)) && isNumber(value[0])) {
         return new Date(value);
     } else {
         return value;
