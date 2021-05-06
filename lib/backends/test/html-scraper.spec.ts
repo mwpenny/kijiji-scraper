@@ -225,15 +225,17 @@ describe("Ad HTML scraper", () => {
 
         describe("attribute scraping", () => {
             it.each`
-                test               | value                         | expectedValue
-                ${"undefined"}     | ${undefined}                  | ${undefined}
-                ${"true boolean"}  | ${"true"}                     | ${true}
-                ${"false boolean"} | ${"false"}                    | ${false}
-                ${"integer"}       | ${"123"}                      | ${123}
-                ${"float"}         | ${"1.21"}                     | ${1.21}
-                ${"date"}          | ${"2020-09-06T20:52:47.474Z"} | ${new Date("2020-09-06T20:52:47.474Z")}
-                ${"string"}        | ${"hello"}                    | ${"hello"}
-                ${"empty string"}  | ${""}                         | ${""}
+                test                | value                            | expectedValue
+                ${"undefined"}      | ${undefined}                     | ${undefined}
+                ${"true boolean"}   | ${"true"}                        | ${true}
+                ${"false boolean"}  | ${"false"}                       | ${false}
+                ${"integer"}        | ${"123"}                         | ${123}
+                ${"float"}          | ${"1.21"}                        | ${1.21}
+                ${"date"}           | ${"2020-09-06T20:52:47.474Z"}    | ${new Date("2020-09-06T20:52:47.474Z")}
+                ${"preciseDate"}    | ${"2021-05-06T00:00:54.978123Z"} | ${new Date("2021-05-06T00:00:54.978123Z")}
+                ${"string"}         | ${"hello"}                       | ${"hello"}
+                ${"datelikeString"} | ${"blah-2021-05-05"}             | ${"blah-2021-05-05"}
+                ${"empty string"}   | ${""}                            | ${""}
             `("should scrape attribute ($test)", async ({ value, expectedValue }) => {
                 mockResponse(createAdHTML({
                     config: {
