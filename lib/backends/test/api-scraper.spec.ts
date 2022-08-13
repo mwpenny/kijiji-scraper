@@ -158,7 +158,7 @@ describe("Ad API scraper", () => {
                 await scraper("not a URL")
                 fail("Expected error for invalid URL");
             } catch (err) {
-                expect(err.message).toBe("Invalid URL: not a URL");
+                expect(err.message).toEqual(expect.stringContaining("Invalid URL"));
             }
         });
 
