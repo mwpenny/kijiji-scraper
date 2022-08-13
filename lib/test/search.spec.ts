@@ -50,16 +50,22 @@ describe.each`
         });
     };
 
-    it("should catch search errors", async () => {
-        activeSearcher.mockImplementationOnce(() => { throw new Error("Error searching"); });
+    it.each`
+        test                 | toThrow
+        ${"Throw Error"}     | ${new Error("Error searching")}
+        ${"Throw non-Error"} | ${1234}
+    `("should catch search errors ($test)", async ({ toThrow }) => {
+        activeSearcher.mockImplementationOnce(() => { throw toThrow; });
 
         try {
             await search({});
             fail("Expected error while searching");
         } catch (err) {
-            expect(err.message).toBe(
-                "Error parsing Kijiji search results: Error searching"
-            );
+            let expectedMessage = "Error parsing Kijiji search results";
+            if (toThrow instanceof Error) {
+                expectedMessage += `: Error searching`;
+            }
+            expect(err.message).toBe(expectedMessage);
         }
     });
 
