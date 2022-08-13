@@ -1,27 +1,39 @@
 import { isNumber, getLargeImageURL, cleanAdDescription, getScraperOptions, ScraperOptions, ScraperType, sleep } from "../helpers";
 
 describe("Helpers", () => {
-    const setTimeoutSpy = jest.spyOn(global, "setTimeout");
+    beforeAll(() => {
+        jest.useFakeTimers();
+    });
+
+    afterAll(() => {
+        jest.useRealTimers();
+    });
 
     afterEach(() => {
         jest.resetAllMocks();
     });
 
+    const flushFulfilledPromises = () => {
+        return Promise.resolve();
+    }
+
     it("sleep should wait the specified time", async () => {
-        let callback: Function | undefined = undefined;
-        setTimeoutSpy.mockImplementationOnce(
-            (handler: TimerHandler, _timeout?: number, ..._args: any[]) => {
-                callback = handler as Function;
-                return 0;
-            }
-        );
+        const callback = jest.fn();
 
-        const promise = sleep(1234).then(() => "done");
-        expect(setTimeoutSpy).toBeCalledWith(expect.any(Function), 1234);
-        expect(callback).toBeDefined();
+        // Not resolved immediately
+        const sleepPromise = sleep(10000).then(callback);
+        await flushFulfilledPromises();
+        expect(callback).not.toBeCalled();
 
-        callback!();
-        expect(await promise).toBe("done");
+        // Still not resolved after some time
+        jest.advanceTimersByTime(9000);
+        await flushFulfilledPromises();
+        expect(callback).not.toBeCalled();
+
+        // Finally resolved after full time has elapsed
+        jest.advanceTimersByTime(1000);
+        await sleepPromise;
+        expect(callback).toBeCalled();
     });
 
     it.each`
