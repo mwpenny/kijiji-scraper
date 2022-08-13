@@ -4,7 +4,10 @@ import fetch from "node-fetch";
 import { scrapeAPI as scraper } from "../api-scraper";
 import * as helpers from "../../helpers";
 
-const FAKE_VALID_AD_URL = "http://example.com/ad/123";
+const AD_ID = "123";
+const ALPHA_AD_ID = "123";
+const FAKE_VALID_AD_URL = `http://example.com/ad/${AD_ID}`;
+const FAKE_VALID_AD_URL_WITH_ALPHA = `http://example.com/ad/${ALPHA_AD_ID}`;
 
 describe("Ad API scraper", () => {
     const fetchSpy = fetch as any as jest.Mock;
@@ -37,9 +40,9 @@ describe("Ad API scraper", () => {
         visits?: number;
     };
 
-    const validateRequest = () => {
+    const validateRequest = (id:String = AD_ID) => {
         expect(fetchSpy).toBeCalledWith(
-            "https://mingle.kijiji.ca/api/ads/123",
+            `https://mingle.kijiji.ca/api/ads/${id}`,
             { compress: true, headers: {
                 "User-Agent": "com.ebay.kijiji.ca 6.5.0 (samsung SM-G930U; Android 8.0.0; en_US)",
                 "Accept-Language": "en-CA",
@@ -158,7 +161,7 @@ describe("Ad API scraper", () => {
                 await scraper("not a URL")
                 fail("Expected error for invalid URL");
             } catch (err) {
-                expect(err.message).toBe("Invalid URL: not a URL");
+                expect(err.message).toBe("Invalid URL");
             }
         });
 
@@ -425,6 +428,18 @@ describe("Ad API scraper", () => {
             validateRequest();
             expect(adInfo).not.toBeNull();
             expect(adInfo!.attributes.visits).toBe(12345);
+        });
+
+        it("should allow for alpha character start in url", async () => {
+            mockResponse(createAdXML({
+                id: ALPHA_AD_ID,
+                title: "My ad title",
+                description: "My ad description",
+            }));
+
+            const adInfo = await scraper(FAKE_VALID_AD_URL_WITH_ALPHA);
+            validateRequest(ALPHA_AD_ID);
+            expect(adInfo).not.toBeNull();
         });
     });
 });

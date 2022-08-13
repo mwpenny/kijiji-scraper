@@ -15,6 +15,7 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": false,
 
     /* Module Resolution Options */
     "esModuleInterop": true

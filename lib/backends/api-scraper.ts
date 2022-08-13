@@ -8,7 +8,7 @@ import { API_REQUEST_HEADERS, BANNED } from "../constants";
 import { cleanAdDescription, getLargeImageURL, isNumber } from "../helpers";
 import { AdInfo } from "../scraper";
 
-const AD_ID_REGEX = /\/(\d+)$/;
+var AD_ID_REGEX = /\/((\w{3}_)?\d+)$/;
 const API_ADS_ENDPOINT = "https://mingle.kijiji.ca/api/ads";
 
 function castAttributeValue(item: cheerio.Cheerio): boolean | number | Date | string | undefined {
