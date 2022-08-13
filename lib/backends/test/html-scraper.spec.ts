@@ -48,7 +48,8 @@ describe("Ad HTML scraper", () => {
             await scraper("http://example.com");
             fail("Expected error for ban");
         } catch (err) {
-            expect(err.message).toBe(
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe(
                 "Kijiji denied access. You are likely temporarily blocked. This " +
                 "can happen if you scrape too aggressively. Try scraping again later, " +
                 "and more slowly. If this happens even when scraping reasonably, please " +

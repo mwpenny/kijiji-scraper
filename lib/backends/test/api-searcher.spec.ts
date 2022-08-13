@@ -79,7 +79,8 @@ describe("Search result API scraper", () => {
             await search();
             fail("Expected error for ban");
         } catch (err) {
-            expect(err.message).toBe(
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe(
                 "Kijiji denied access. You are likely temporarily blocked. This " +
                 "can happen if you scrape too aggressively. Try scraping again later, " +
                 "and more slowly. If this happens even when scraping reasonably, please " +
@@ -115,7 +116,8 @@ describe("Search result API scraper", () => {
                 await search();
                 fail("Expected error while scraping results page");
             } catch (err) {
-                expect(err.message).toBe(
+                expect(err).toBeInstanceOf(Error);
+                expect((err as Error).message).toBe(
                     "Result ad could not be parsed. It is possible that Kijiji " +
                     "changed their markup. If you believe this to be the case, " +
                     "please open an issue at: https://github.com/mwpenny/kijiji-scraper/issues"

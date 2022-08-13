@@ -70,7 +70,10 @@ describe("Helpers", () => {
                     getScraperOptions(scraperOptions);
                     fail("Expected error for bad scraper options");
                 } catch (err) {
-                    expect(err.message).toBe("Invalid value for scraper option 'scraperType'. Valid values are: api, html");
+                    expect(err).toBeInstanceOf(Error);
+                    expect((err as Error).message).toBe(
+                        "Invalid value for scraper option 'scraperType'. Valid values are: api, html"
+                    );
                 }
             });
 

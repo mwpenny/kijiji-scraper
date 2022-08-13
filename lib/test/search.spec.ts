@@ -65,7 +65,9 @@ describe.each`
             if (toThrow instanceof Error) {
                 expectedMessage += `: Error searching`;
             }
-            expect(err.message).toBe(expectedMessage);
+
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe(expectedMessage);
         }
     });
 
@@ -99,7 +101,10 @@ describe.each`
                     await search({ [param]: (useObject ? { id } : id) });
                     fail(`Expected error for bad ${param}`);
                 } catch (err) {
-                    expect(err.message).toBe(`Integer property '${param}' must be specified`);
+                    expect(err).toBeInstanceOf(Error);
+                    expect((err as Error).message).toBe(
+                        `Integer property '${param}' must be specified`
+                    );
                     allSearchers.forEach(s => expect(s).not.toBeCalled());
                 }
             });
@@ -145,7 +150,8 @@ describe.each`
                 await search({});
                 fail("Expected error for bad scraper options");
             } catch (err) {
-                expect(err.message).toBe("Bad options");
+                expect(err).toBeInstanceOf(Error);
+                expect((err as Error).message).toBe("Bad options");
                 allSearchers.forEach(s => expect(s).not.toBeCalled());
             }
         });
@@ -168,7 +174,10 @@ describe.each`
                     await search({}, { [option]: value });
                     fail(`Expected error for bad ${option}`);
                 } catch (err) {
-                    expect(err.message).toBe(`Integer property '${option}' must be specified`);
+                    expect(err).toBeInstanceOf(Error);
+                    expect((err as Error).message).toBe(
+                        `Integer property '${option}' must be specified`
+                    );
                     allSearchers.forEach(s => expect(s).not.toBeCalled());
                 }
             });
