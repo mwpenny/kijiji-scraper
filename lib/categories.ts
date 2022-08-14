@@ -437,6 +437,7 @@ export const categories = {
         REPTILES_AND_AMPHIBIANS_FOR_REHOMING: { id: 14654004 },
         SMALL_ANIMALS_FOR_REHOMING: { id: 14654005 },
         OTHER_PETS_FOR_REHOMING: { id: 114 },
+        REGISTERED_SHELTER_RESCUE: { id: 14996003 },
         OTHER: { id: 127 }
     },
     COMMUNITY: {
