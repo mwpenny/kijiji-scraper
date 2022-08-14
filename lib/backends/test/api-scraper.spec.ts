@@ -110,7 +110,8 @@ describe("Ad API scraper", () => {
             await scraper(FAKE_VALID_AD_URL);
             fail("Expected error for ban");
         } catch (err) {
-            expect(err.message).toBe(
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe(
                 "Kijiji denied access. You are likely temporarily blocked. This " +
                 "can happen if you scrape too aggressively. Try scraping again later, " +
                 "and more slowly. If this happens even when scraping reasonably, please " +
@@ -146,9 +147,11 @@ describe("Ad API scraper", () => {
         try {
             await scraper(FAKE_VALID_AD_URL);
             fail("Expected API error");
-        } catch (error) {
+        } catch (err) {
             validateRequest();
-            expect(error.message).toBe("Kijiji returned error: Scraped knee!");
+
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe("Kijiji returned error: Scraped knee!");
         }
     });
 
@@ -158,7 +161,7 @@ describe("Ad API scraper", () => {
                 await scraper("not a URL")
                 fail("Expected error for invalid URL");
             } catch (err) {
-                expect(err.message).toBe("Invalid URL: not a URL");
+                expect((err as Error).message).toEqual(expect.stringContaining("Invalid URL"));
             }
         });
 
@@ -167,7 +170,10 @@ describe("Ad API scraper", () => {
                 await scraper("http://example.com")
                 fail("Expected error for invalid URL");
             } catch (err) {
-                expect(err.message).toBe("Invalid Kijiji ad URL. Ad URLs must end in /some-ad-id.");
+                expect(err).toBeInstanceOf(Error);
+                expect((err as Error).message).toBe(
+                    "Invalid Kijiji ad URL. Ad URLs must end in /some-ad-id."
+                );
             }
         });
 

@@ -40,7 +40,8 @@ describe.each`
             await scrape(url);
             fail("Expected error for bad URL");
         } catch (err) {
-            expect(err.message).toBe("URL must be specified");
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe("URL must be specified");
             allScrapers.forEach(s => expect(s).not.toBeCalled());
         }
     });
@@ -52,7 +53,8 @@ describe.each`
             await scrape(url);
             fail("Expected error for no ad info");
         } catch (err) {
-            expect(err.message).toBe(
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe(
                 "Ad not found or invalid response received from Kijiji for " +
                 "ad at http://example.com. It is possible that Kijiji changed " +
                 "their markup. If you believe this to be the case, please open " +
@@ -74,7 +76,8 @@ describe.each`
             await scrape("http://example.com", {});
             fail("Expected error for bad scraper options");
         } catch (err) {
-            expect(err.message).toBe("Bad options");
+            expect(err).toBeInstanceOf(Error);
+            expect((err as Error).message).toBe("Bad options");
             allScrapers.forEach(s => expect(s).not.toBeCalled());
         }
     });
