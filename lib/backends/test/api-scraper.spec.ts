@@ -59,7 +59,13 @@ describe("Ad API scraper", () => {
         return `
             <attr:attribute
                 name="${name}"
-                ${value instanceof Date ? 'type="DATE"' : ""}
+                ${value instanceof Date ?
+                    'type="DATE"'
+                : typeof value === "boolean" ?
+                    'type="BOOLEAN"'
+                :
+                    ""
+                }
             >
                 ${value !== undefined ?
                     `
@@ -68,13 +74,16 @@ describe("Ad API scraper", () => {
                                 `localized-label=${localizedValue}`
                             : typeof value === "boolean" ?
                                 `localized-label=${value ? "Yes" : "No"}`
-                            : ""}
+                            :
+                                ""
+                            }
                         >
-                        ${
-                            value instanceof Date ? value.toISOString() :
-                            typeof value === "string" ? value :
-                            Number(value)
-                        }
+                        ${value instanceof Date ?
+                            value.toISOString()
+                        : typeof value === "string" ?
+                            value
+                        :
+                            Number(value)}
                         </attr:value>
                     `
                     : ""
@@ -314,23 +323,25 @@ describe("Ad API scraper", () => {
 
         describe("attribute scraping", () => {
             it.each`
-                test               | value
-                ${"undefined"}     | ${undefined}
-                ${"true boolean"}  | ${true}
-                ${"false boolean"} | ${false}
-                ${"integer"}       | ${123}
-                ${"float"}         | ${1.21}
-                ${"date"}          | ${new Date("2020-09-06T20:52:47.474Z")}
-                ${"string"}        | ${"hello"}
-                ${"empty string"}  | ${""}
-            `("should scrape attribute ($test)", async ({ value }) => {
+                test                        | attr                                               | expected
+                ${"undefined"}              | ${{ value: undefined }}                            | ${undefined}
+                ${"true explicit boolean"}  | ${{ value: true }}                                 | ${true}
+                ${"false explicit boolean"} | ${{ value: false }}                                | ${false}
+                ${"true implicit boolean"}  | ${{ value: 1, localizedValue: "Yes" }}             | ${true}
+                ${"false implicit boolean"} | ${{ value: 0, localizedValue: "No" }}              | ${false}
+                ${"integer"}                | ${{ value: 123 }}                                  | ${123}
+                ${"float"}                  | ${{ value: 1.21 }}                                 | ${1.21}
+                ${"date"}                   | ${{ value: new Date("2020-09-06T20:52:47.474Z") }} | ${new Date("2020-09-06T20:52:47.474Z")}
+                ${"string"}                 | ${{ value: "hello" }}                              | ${"hello"}
+                ${"empty string"}           | ${{ value: "" }}                                   | ${""}
+            `("should scrape attribute ($test)", async ({ attr, expected }) => {
                 mockResponse(createAdXML({
                     id: "123",
                     title: "My ad title",
                     description: "My ad description",
                     date: new Date(),
                     attributes: {
-                        myAttr: { value }
+                        myAttr: attr
                     }
                 }));
 
@@ -338,7 +349,7 @@ describe("Ad API scraper", () => {
                 validateRequest();
                 expect(adInfo).not.toBeNull();
                 expect(adInfo!.attributes).toEqual({
-                    myAttr: value
+                    myAttr: expected
                 });
             });
 
