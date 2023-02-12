@@ -22,10 +22,8 @@ function castAttributeValue(item: cheerio.Cheerio): boolean | number | Date | st
     const localizedValue = (valueElem.attr("localized-label") || "").toLowerCase();
 
     // Kijiji only returns strings for attributes. Convert to appropriate types
-    if (localizedValue === "yes") {
-        return true;
-    } else if (localizedValue === "no") {
-        return false;
+    if (type === "boolean" || ["yes", "no"].includes(localizedValue)) {
+        return value === "1";
     } else if (isNumber(value)) {
         // Numeric values are sometimes inaccurate. For example, numberbathrooms
         // is multipled by 10. Prefer localized version if it is also a number.
@@ -110,7 +108,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     }
 
     const viewCount = $("ad\\:view-ad-count").text();
-    if (viewCount) {
+    if (isNumber(viewCount)) {
         info.attributes["visits"] = Number(viewCount);
     }
     return info;
