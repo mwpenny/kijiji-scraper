@@ -388,7 +388,11 @@ export const categories = {
         FINANCIAL_AND_LEGAL: { id: 131 },
         FITNESS_AND_PERSONAL_TRAINER: { id: 83 },
         FOOD_AND_CATERING: { id: 15214001 },
-        HEALTH_AND_BEAUTY: { id: 166 },
+        HEALTH_AND_BEAUTY: {
+            id: 166,
+            HEALTH_AND_BEAUTY_SERVICES: { id: 1661 },
+            MASSAGE_SERVICES: { id: 1662 }
+        },
         MOVING_AND_STORAGE: { id: 144 },
         MUSIC_LESSONS: { id: 86 },
         PHOTOGRAPHY_AND_VIDEO: { id: 168 },
