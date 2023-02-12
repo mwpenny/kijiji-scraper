@@ -61,9 +61,11 @@ describe.each`
             await search({});
             fail("Expected error while searching");
         } catch (err) {
-            let expectedMessage = "Error parsing Kijiji search results";
+            let expectedMessage = "Error parsing Kijiji search results: ";
             if (toThrow instanceof Error) {
-                expectedMessage += `: Error searching`;
+                expectedMessage += toThrow.message;
+            } else {
+                expectedMessage += toThrow;
             }
 
             expect(err).toBeInstanceOf(Error);

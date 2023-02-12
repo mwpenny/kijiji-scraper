@@ -148,9 +148,11 @@ async function getSearchResults(searcher: Searcher, params: ResolvedSearchParame
             }
         }
     } catch (err) {
-        let message = "Error parsing Kijiji search results";
+        let message = "Error parsing Kijiji search results: ";
         if (err instanceof Error) {
-            message += `: ${err.message}`;
+            message += err.message;
+        } else {
+            message += err;
         }
         throw new Error(message);
     }
