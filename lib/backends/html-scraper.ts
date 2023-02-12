@@ -18,10 +18,8 @@ function castAttributeValue(attr: any): boolean | number | Date | string | undef
     const localizedValue = (attr.localeSpecificValues?.en?.value || "").toLowerCase();
 
     // Kijiji only returns strings. Convert to appropriate types
-    if (value.toLowerCase() === "true") {
-        return true;
-    } else if (value.toLowerCase() === "false") {
-        return false;
+    if (attr.booleanAttribute || ["yes", "no"].includes(localizedValue)) {
+        return value === "1";
     } else if (isNumber(value)) {
         // Numeric values are sometimes inaccurate. For example, numberbathrooms
         // is multipled by 10. Prefer localized version if it is also a number.
