@@ -429,19 +429,24 @@ describe("Ad API scraper", () => {
             expect(adInfo!.attributes.type).toBe("Some type");
         });
 
-        it("should scrape visits", async () => {
+        it.each`
+            test                    | value        | expected
+            ${"no amount"}          | ${undefined} | ${undefined}
+            ${"non-numeric amount"} | ${"abc"}     | ${undefined}
+            ${"with amount"}        | ${12345}     | ${12345}
+        `("should scrape visits ($test)", async ({value, expected}) => {
             mockResponse(createAdXML({
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
                 date: new Date(),
-                visits: 12345
+                visits: value
             }));
 
             const adInfo = await scraper(FAKE_VALID_AD_URL);
             validateRequest();
             expect(adInfo).not.toBeNull();
-            expect(adInfo!.attributes.visits).toBe(12345);
+            expect(adInfo!.attributes.visits).toBe(expected);
         });
     });
 });

@@ -108,7 +108,7 @@ export function scrapeAdElement(elem: cheerio.Element): AdInfo | null {
     }
 
     const viewCount = $("ad\\:view-ad-count").text();
-    if (viewCount) {
+    if (isNumber(viewCount)) {
         info.attributes["visits"] = Number(viewCount);
     }
     return info;
