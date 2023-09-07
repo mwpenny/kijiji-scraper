@@ -10,100 +10,55 @@ import { Ad } from "../ad";
 import { BANNED, HTML_REQUEST_HEADERS, POSSIBLE_BAD_MARKUP } from "../constants";
 import { AdInfo } from "../scraper";
 import { PageResults, ResolvedSearchParameters } from "../search";
+import { getLargeImageURL } from "../helpers";
 
 const KIJIJI_BASE_URL = "https://www.kijiji.ca";
 const KIJIJI_SEARCH_URL = KIJIJI_BASE_URL + "/b-search.html";
-const IMG_REGEX = /\/s\-l\d+\.jpg$/;
 const LOCATION_REGEX = /(.+)(\/.*)$/;
-
-/* Converts a date from a Kijiji ad result into a date object
-   (e.g., "< x hours ago", "yesterday", "dd/mm/yyyy") */
-   function dateFromRelativeDateString(dateString: string): Date {
-    if (dateString) {
-        dateString = dateString.toLowerCase().replace(/\//g, " ");
-
-        const split = dateString.split(" ");
-        const d = new Date();
-
-        if (split.length === 3) {
-            // dd/mm/yyyy format
-            d.setHours(0, 0, 0, 0);
-            d.setDate(parseInt(split[0]));
-            d.setMonth(parseInt(split[1]) - 1);
-            d.setFullYear(parseInt(split[2]));
-            return d;
-        } else if (split.length === 4) {
-            // "< x hours/minutes ago" format
-            const num = parseInt(split[1]);
-            const timeUnit = split[2];
-
-            if (timeUnit === "minutes") {
-                d.setMinutes(d.getMinutes() - num);
-                d.setSeconds(0, 0);
-            } else if (timeUnit === "hours") {
-                d.setHours(d.getHours() - num, 0, 0, 0);
-            }
-            return d;
-        } else if (dateString == "yesterday") {
-            d.setDate(d.getDate() - 1);
-            d.setHours(0, 0, 0, 0);
-            return d;
-        }
-    }
-    return new Date(NaN);
-}
 
 /* Extracts ad information from the HTML of a Kijiji ad results page */
 function parseResultsHTML(html: string): Ad[] {
     const adResults: Ad[] = [];
     const $ = cheerio.load(html);
 
-    // Get info for each ad
-    const allAdElements = $(".regular-ad");
-    const filteredAdElements = allAdElements.not(".third-party");
+    if (html.trim().length === 0) {
+        return adResults;
+    }
 
-    filteredAdElements.each((_i, item) => {
-        const path = $(item).find("a.title").attr("href");
-        const url = KIJIJI_BASE_URL + path;
-        const info: Partial<AdInfo> = {
-            id: $(item).data("listing-id")?.toString() || "",
+    // Kijiji is nice and gives us an object containing ad info
+    const resultJson = $("script#__NEXT_DATA__").text().trim();
+    if (!resultJson) {
+        throw new Error(`Kijiji result JSON not present. ${POSSIBLE_BAD_MARKUP}`);
+    }
 
-            title: $(item).find("a.title").text().trim(),
+    const allAds: any[] | undefined = JSON.parse(resultJson)
+        .props
+        ?.pageProps
+        ?.listings;
+    if (allAds === undefined) {
+        throw new Error(`Result JSON could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
+    }
 
-            image: (
-                // `data-src` contains the URL of the image to lazy load
-                //
-                // `src` starts off with a placeholder image and will
-                // remain if the ad has no image
-                $(item).find(".image img").data("src") || $(item).find(".image img").attr("src") || ""
-            ).replace(IMG_REGEX, "/s-l2000.jpg"),
+    // All non-sponsored ads
+    const filteredAds = allAds.filter(ad => ad.adSource === "ORGANIC");
 
-            date: dateFromRelativeDateString(
-                // For some reason, some categories (like anything under
-                // SERVICES) use different markup than usual
-                //
-                // The string split is needed to handle:
-                //
-                // <td class="posted">
-                //    Some date
-                //    <br>
-                //    Some location
-                // </td>
-                //
-                // AKA "Some date\nSome location"
-                ($(item).find(".date-posted").text() || $(item).find(".posted").text()).trim().split("\n")[0]
-            ),
-
-            // Pick a format, Kijiji
-            description: ($(item).find(".description > p").text() || $(item).find(".description").text()).trim()
-        };
-
-        if (!path) {
-            throw new Error(`Result ad has no URL. ${POSSIBLE_BAD_MARKUP}`);
+    for (const ad of filteredAds) {
+        if (!ad.seoUrl || !ad.id || !ad.title || !ad.activationDate) {
+            throw new Error(`Result ad could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
         }
 
+        const url = KIJIJI_BASE_URL + ad.seoUrl;
+        const info: Partial<AdInfo> = {
+            id: ad.id,
+            title: ad.title.trim(),
+            image: getLargeImageURL((ad.imageUrls || [])[0] || ""),
+            date: new Date(ad.activationDate),
+            description: (ad.description || "").trim()
+        };
+
         adResults.push(new Ad(url, info));
-    });
+    }
+
     return adResults;
 }
 
@@ -154,7 +109,7 @@ export class HTMLSearcher {
             })
             .then(body => ({
                 pageResults: parseResultsHTML(body),
-                isLastPage: body.indexOf('"isLastPage":true') !== -1
+                isLastPage: body.indexOf("pagination-next-link") === -1
             }));
     }
 }

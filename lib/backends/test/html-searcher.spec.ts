@@ -4,102 +4,41 @@ import fetch from "node-fetch";
 import qs from "querystring";
 import { ResolvedSearchParameters, SearchParameters } from "../../search";
 import { HTMLSearcher } from "../html-searcher";
+import * as helpers from "../../helpers";
 
-type ResultInfo = {
-    isFeatured: boolean;
-    isThirdParty: boolean;
-    title: string;
-    path: string;
-    description: string;
-    imageAttributes: string;
-    datePosted: string;
+type MockListing = {
+    seoUrl: string;
     id: string;
+    title: string;
+    description: string;
+    imageUrls: string[];
+    activationDate: string;
+    adSource: string;
+}
+
+const createResultInfo = (listings: Partial<MockListing>[] = []) => {
+    return {
+        props: {
+            pageProps: {
+                listings
+            }
+        }
+    };
 };
 
-const defaultResultInfo: ResultInfo = {
-    isFeatured: false,
-    isThirdParty: false,
-    title: "",
-    path: "/someAd",
-    description: "",
-    imageAttributes: "",
-    datePosted: "",
-    id: ""
-};
-
-// Result pages in most categories use this markup
-const createStandardResultHTML = (info: Partial<ResultInfo>): string => {
-    info = { ...defaultResultInfo, ...info };
-
+const createResultHTML = (resultInfo: any = createResultInfo()) => {
     return `
-        <div class="search-item
-            ${info.isFeatured ? "top-feature" : "regular-ad"}
-            ${info.isThirdParty ? "third-party" : ""}"
-            ${info.id ? `data-listing-id="${info.id}"` : ""}>
-            <div class="clearfix">
-                <div class="left-col">
-                    <div class="image">
-                        <picture><img ${info.imageAttributes}></picture>
-                    </div>
-
-                    <div class="info">
-                        <div class="info-container">
-                            <div class="title">
-                                <a class="title" href="${info.path}">${info.title}</a>
-                            </div>
-
-                            <div class="location">
-                                <span class="">Some location</span>
-                                <span class="date-posted">${info.datePosted}</span>
-                            </div>
-
-                            <div class="description">${info.description}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <html>
+            <body>
+                <script id="__NEXT_DATA__" type="application/json">
+                    ${JSON.stringify(resultInfo)}
+                </script>
+            </body>
+        </html>
     `;
 };
 
-// For some reason, some categories (like anything under
-// SERVICES) use different markup classes than usual
-const createServiceResultHTML = (info: Partial<ResultInfo>): string => {
-    info = { ...defaultResultInfo, ...info };
-
-    return `
-        <table class="
-            ${info.isFeatured ? "top-feature" : "regular-ad"}
-            ${info.isThirdParty ? "third-party" : ""}"
-            ${info.id ? `data-listing-id="${info.id}"` : ""}>
-            <tbody>
-                <tr>
-                    <td class="description">
-                        <a class="title" href="${info.path}">${info.title}</a>
-                        <p>${info.description}</p>
-                    </td>
-
-                    <td class="image">
-                        <div class="multiple-images">
-                            <picture><img ${info.imageAttributes}></picture>
-                        </div>
-                    </td>
-
-                    <td class="posted">
-                        ${info.datePosted}<br>
-                        Some location
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    `;
-};
-
-describe.each`
-    markup                           | createResultHTML
-    ${"standard result page markup"} | ${createStandardResultHTML}
-    ${"service result page markup"}  | ${createServiceResultHTML}
-`("Search result HTML scraper ($markup)", ({ createResultHTML }) => {
+describe("Search result HTML scraper", () => {
     const fetchSpy = fetch as any as jest.Mock;
 
     afterEach(() => {
@@ -161,7 +100,7 @@ describe.each`
             validateRequestHeaders();
         }
     });
-    
+
     describe("search parameters", () => {
         it("should pass all defined params in search URL", async () => {
             const params = {
@@ -173,7 +112,7 @@ describe.each`
             };
 
             fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML() });
 
             await search(params);
 
@@ -207,8 +146,8 @@ describe.each`
 
         it("should be used for pagination", async () => {
             fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML() });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML() });
 
             const searcher = new HTMLSearcher();
             await searcher.getPageResults({ locationId: 0, categoryId: 0 }, 1);
@@ -226,60 +165,24 @@ describe.each`
     });
 
     describe("result page scraping", () => {
-        // Helpers for date tests
-        const nanDataValidator = (date: Date) => {
-            expect(Number.isNaN(date.getTime())).toBe(true);
-        };
-        const makeSpecificDateValidator = (month: number, day: number, year: number) => {
-            return (date: Date) => {
-                const d = new Date();
-                d.setMonth(month - 1);
-                d.setDate(day);
-                d.setFullYear(year);
-                d.setHours(0, 0, 0, 0);
-
-                expect(date).toEqual(d);
-            }
-        };
-        const makeMinutesAgoValidator = (minutes: number) => {
-            return (date: Date) => {
-                const minutesAgo = new Date();
-                minutesAgo.setMinutes(minutesAgo.getMinutes() - minutes, 0, 0);
-
-                expect(date).toEqual(minutesAgo);
-            }
-        };
-        const makeHoursAgoValidator = (hours: number) => {
-            return (date: Date) => {
-                const hoursAgo = new Date();
-                hoursAgo.setHours(hoursAgo.getHours() - hours, 0, 0, 0);
-
-                expect(date).toEqual(hoursAgo);
-            }
-        };
-        const makeDaysAgoValidator = (days: number) => {
-            return (date: Date) => {
-                const daysAgo = new Date();
-                daysAgo.setDate(daysAgo.getDate() - days);
-                daysAgo.setHours(0, 0, 0, 0);
-
-                expect(date).toEqual(daysAgo);
-            }
-        };
-        const nowIshValidator = (date: Date) => {
-            const nowIsh = new Date();
-            nowIsh.setSeconds(date.getSeconds());
-            nowIsh.setMilliseconds(date.getMilliseconds());
-
-            expect(date).toEqual(nowIsh);
-        };
-
         beforeEach(() => {
             fetchSpy.mockResolvedValueOnce({ status: 200, url: "http://example.com/search/results" });
         });
 
-        it("should throw error if results page is invalid", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "" }) });
+        it.each`
+            test                            | expectedError                        | html
+            ${"Bad markup"}                 | ${"Kijiji result JSON not present"}  | ${"Bad markup"}
+            ${"Missing __NEXT_DATA__"}      | ${"Kijiji result JSON not present"}  | ${"<html></html>"}
+            ${"Empty __NEXT_DATA__"}        | ${"Result JSON could not be parsed"} | ${createResultHTML({})}
+            ${"Missing props property"}     | ${"Result JSON could not be parsed"} | ${createResultHTML({ abc: 123 })}
+            ${"Missing pageProps property"} | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: {} })}
+            ${"Missing listings property"}  | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: { pageProps: {} } })}
+            ${"Missing URL"}                | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ id: "123", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing ID"}                 | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing title"}              | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing date"}               | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", title: "abc", adSource: "ORGANIC" }]))}
+        `("should throw error if results page is invalid ($test)", async ({ expectedError, html }) => {
+            fetchSpy.mockResolvedValueOnce({ text: () => html });
 
             try {
                 await search();
@@ -287,16 +190,22 @@ describe.each`
             } catch (err) {
                 expect(err).toBeInstanceOf(Error);
                 expect((err as Error).message).toBe(
-                    "Result ad has no URL. It is possible that Kijiji changed their " +
-                    "markup. If you believe this to be the case, please open an issue " +
-                    "at: https://github.com/mwpenny/kijiji-scraper/issues"
+                    `${expectedError}. It is possible that Kijiji changed their ` +
+                    "markup. If you believe this to be the case, please open an " +
+                    "issue at: https://github.com/mwpenny/kijiji-scraper/issues"
                 );
                 validateRequestHeaders();
             }
         });
 
         it("should scrape ID", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ id: "123" }) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                activationDate: (new Date()).toISOString(),
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
@@ -306,89 +215,170 @@ describe.each`
         });
 
         it("should scrape title", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ title: "My title" }) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: (new Date()).toISOString(),
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults).toEqual([expect.objectContaining({
-                title: "My title"
+                title: "My ad title"
             })]);
         });
 
         it.each`
-            test                    | imageAttributes                   | expectedValue
-            ${"with data-src"}      | ${'data-src="/image" src="blah"'} | ${"/image"}
-            ${"with src"}           | ${'data-src="" src="/image"'}     | ${"/image"}
-            ${"with no attributes"} | ${""}                             | ${""}
-            ${"upsize"}             | ${'src="/image/s-l123.jpg"'}      | ${"/image/s-l2000.jpg"}
-        `("should scrape image ($test)", async ({ imageAttributes, expectedValue }) => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ imageAttributes }) });
+            test                 | urls                    | expectedURL
+            ${"no images"}       | ${undefined}            | ${""}
+            ${"empty images"}    | ${[]}                   | ${""}
+            ${"one image"}       | ${["image1"]}           | ${"image1_large"}
+            ${"multiple images"} | ${["image1", "image2"]} | ${"image1_large"}
+        `("should scrape image ($test)", async ({ urls, expectedURL }) => {
+            const getLargeImageURLSpy = jest.spyOn(helpers, "getLargeImageURL");
+            getLargeImageURLSpy.mockImplementation(url => url ? url + "_large" : url);
+
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: (new Date()).toISOString(),
+                imageUrls: urls,
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults).toEqual([expect.objectContaining({
-                image: expectedValue
+                image: expectedURL
             })]);
             expect(pageResults[0].isScraped()).toBe(false);
+
+            getLargeImageURLSpy.mockRestore();
         });
 
-        it.each`
-            test             | datePosted           | validator
-            ${"no date"}     | ${""}                | ${nanDataValidator}
-            ${"invalid"}     | ${"invalid"}         | ${nanDataValidator}
-            ${"dd/mm/yyyy"}  | ${"7/9/2020"}        | ${makeSpecificDateValidator(9, 7, 2020)}
-            ${"minutes ago"} | ${"< 5 minutes ago"} | ${makeMinutesAgoValidator(5)}
-            ${"hours ago"}   | ${"< 2 hours ago"}   | ${makeHoursAgoValidator(2)}
-            ${"invalid ago"} | ${"< 1 parsec ago"}  | ${nowIshValidator}
-            ${"yesterday"}   | ${"yesterday"}       | ${makeDaysAgoValidator(1)}
-        `("should scrape date ($test)", async ({ datePosted, validator }) => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ datePosted }) });
+        it("should scrape date", async () => {
+            const date = new Date();
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: date.toISOString(),
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
+
             expect(pageResults.length).toBe(1);
-            validator(pageResults[0].date);
-            expect(pageResults[0].isScraped()).toBe(false);
+
+            const result = pageResults[0];
+            expect(result.date).toEqual(date);
+            expect(result.isScraped()).toBe(false);
         });
 
         it("should scrape description", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ description: "My desc" }) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: (new Date()).toISOString(),
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults).toEqual([expect.objectContaining({
-                description: "My desc"
+                description: "My ad description"
             })]);
             expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should scrape url", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({ path: "/myad" }) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: (new Date()).toISOString(),
+                adSource: "ORGANIC"
+            }]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults).toEqual([expect.objectContaining({
-                url: "https://www.kijiji.ca/myad"
+                url: "https://www.kijiji.ca/some-path"
             })]);
             expect(pageResults[0].isScraped()).toBe(false);
         });
 
         it("should exclude featured ads", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) + createResultHTML({ isFeatured: true }) });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([
+                {
+                    seoUrl: "/some-path-1",
+                    id: "123",
+                    title: "My ad title",
+                    description: "My ad description",
+                    activationDate: (new Date()).toISOString(),
+                    adSource: "ORGANIC"
+                },
+                {
+                    seoUrl: "/some-path-2",
+                    id: "456",
+                    title: "Non-organic ad",
+                    description: "My ad description",
+                    activationDate: (new Date()).toISOString(),
+                    adSource: "MONSANTO"
+                }
+            ]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults.length).toBe(1);
+            expect(pageResults[0].id).toBe("123");
             expect(pageResults[0].isScraped()).toBe(false);
         });
 
-        it("should exclude third-party ads", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML({}) + createResultHTML({ isThirdParty: true }) });
+        it("should scrape each result ad", async () => {
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([
+                {
+                    seoUrl: "/some-path-1",
+                    id: "1",
+                    title: "Ad 1",
+                    activationDate: (new Date(123)).toISOString(),
+                    adSource: "ORGANIC"
+                },
+                {
+                    seoUrl: "/some-path-2",
+                    id: "2",
+                    title: "Ad 2",
+                    activationDate: (new Date(123)).toISOString(),
+                    adSource: "ORGANIC"
+                }
+            ]))});
 
             const { pageResults } = await search();
             validateRequestHeaders();
-            expect(pageResults.length).toBe(1);
+
+            expect(pageResults).toEqual([
+                expect.objectContaining({
+                    id: "1",
+                    title: "Ad 1"
+                }),
+                expect.objectContaining({
+                    id: "2",
+                    title: "Ad 2"
+                })
+            ]);
+
             expect(pageResults[0].isScraped()).toBe(false);
+            expect(pageResults[1].isScraped()).toBe(false);
         });
 
         it.each`
@@ -396,9 +386,17 @@ describe.each`
             ${true}
             ${false}
         `("should detect last page (isLastPage=$isLastPage)", async ({ isLastPage }) => {
-            let mockResponse = createResultHTML({});
-            if (isLastPage) {
-                mockResponse += '"isLastPage":true';
+            let mockResponse = createResultHTML(createResultInfo([{
+                seoUrl: "/some-path",
+                id: "123",
+                title: "My ad title",
+                description: "My ad description",
+                activationDate: (new Date()).toISOString(),
+                adSource: "ORGANIC"
+            }]));
+
+            if (!isLastPage) {
+                mockResponse += "pagination-next-link";
             }
             fetchSpy.mockResolvedValueOnce({ text: () => mockResponse });
 
