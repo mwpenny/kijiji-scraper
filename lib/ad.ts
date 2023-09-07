@@ -26,7 +26,7 @@ export class Ad extends AdInfo {
      * (e.g., storing ad URLs entered by a user for delayed scraping).
      *
      * `Ad.isScraped()` returns `false` for `Ad` objects constructed in this
-     * way unless `scraped` is passed as `true`or they are subsequently scraped
+     * way unless `scraped` is passed as `true` or they are subsequently scraped
      * by calling `Ad.scrape()`, which causes the scraper to replace the ad's
      * information with what is found at its URL.
      *
