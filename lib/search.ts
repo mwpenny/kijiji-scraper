@@ -279,8 +279,9 @@ export function search(params: SearchParameters, options: SearchOptions & Scrape
                 } else {
                     await Promise.all(results.map(ad => {
                         if (!ad.isScraped()) {
-                            ad.scrape();
+                            return ad.scrape();
                         }
+                        return Promise.resolve();
                     }));
                 }
             }

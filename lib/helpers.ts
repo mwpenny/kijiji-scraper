@@ -3,7 +3,7 @@
 
 import cheerio from "cheerio";
 
-const IMG_REGEX = /\/\$_\d+\.(?:JPG|PNG)$/;
+const IMG_REGEX = /\?rule=kijijica-\d+-/;
 
 /**
  * Kijiji scraping method
@@ -42,10 +42,10 @@ export function isNumber(value: string): boolean {
 };
 
 export function getLargeImageURL(url: string): string {
-    // Kijiji/eBay image URLs typically end with "$_dd.JPG", where "dd" is a
-    // number between 0 and 140 indicating the desired image size and
-    // quality. "57" is up to 1024x1024, the largest I've found.
-    return url.replace(IMG_REGEX, "/$_57.JPG");
+    // Kijiji image URLs typically end with "?rule=kijijica-<num>-<format>",
+    // where "<num>" is a number indicating the width. 960px is the largest
+    // I've found to work.
+    return url.replace(IMG_REGEX, "?rule=kijijica-960-");
 }
 
 export function cleanAdDescription(text: string): string {

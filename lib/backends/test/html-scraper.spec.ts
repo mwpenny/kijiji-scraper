@@ -67,8 +67,8 @@ describe("Ad HTML scraper", () => {
         ${"Missing config property"} | ${createAdHTML({ abc: 123 })}
         ${"Missing adInfo property"} | ${createAdHTML({ config: {} })}
         ${"Missing VIP property"}    | ${createAdHTML({ config: { adInfo: {} } })}
-        ${"Missing ID"}              | ${createAdHTML({ config: { adInfo: {}, VIP: {} } })}
-        ${"Missing title"}           | ${createAdHTML({ config: { adInfo: {}, VIP: { adId: 1234 } } })}
+        ${"Missing ID"}              | ${createAdHTML({ config: { adInfo: { title: "Test" }, VIP: { sortingDate: 0 } } })}
+        ${"Missing title"}           | ${createAdHTML({ config: { adInfo: {}, VIP: { adId: 1234, sortingDate: 0 } } })}
         ${"Missing date"}            | ${createAdHTML({ config: { adInfo: { title: "Test" }, VIP: { adId: 1234 } } })}
     `("should fail to scrape invalid HTML ($test)", async ({ html }) => {
         mockResponse(html);

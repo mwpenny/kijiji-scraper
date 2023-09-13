@@ -133,8 +133,8 @@ describe("Ad API scraper", () => {
     it.each`
         test                     | xml
         ${"Bad markup"}          | ${"Bad markup"}
-        ${"Missing id"}          | ${createAdXML({})}
-        ${"Missing title"}       | ${createAdXML({ id: "123" })}
+        ${"Missing ID"}          | ${createAdXML({ title: "My ad title", date: new Date() })}
+        ${"Missing title"}       | ${createAdXML({ id: "123", date: new Date() })}
         ${"Missing date"}        | ${createAdXML({ id: "123", title: "My ad title" })}
     `("should fail to scrape invalid XML ($test)", async ({ xml }) => {
         mockResponse(xml);

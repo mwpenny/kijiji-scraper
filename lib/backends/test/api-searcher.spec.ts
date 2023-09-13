@@ -16,13 +16,13 @@ describe("Search result API scraper", () => {
     });
 
     type MockAdInfo = {
-        url?: string;
-        id?: string;
-        title?: string;
-        date?: Date;
+        url: string;
+        id: string;
+        title: string;
+        date: Date;
     };
 
-    const createAdXML = (info: MockAdInfo) => {
+    const createAdXML = (info: Partial<MockAdInfo>) => {
         return `
             <ad:ad ${info.id ? `id="${info.id}"` : ""}>
                 ${info.url ? `<ad:link rel="self-public-website" href="${info.url}"></ad:link>` : ""}
