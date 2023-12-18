@@ -20,7 +20,9 @@ const createResultInfo = (listings: Partial<MockListing>[] = []) => {
     return {
         props: {
             pageProps: {
-                listings
+                __APOLLO_STATE__: Object.fromEntries(
+                    listings.map((listing, i) => [`ListingV2:${i}`, listing])
+                )
             }
         }
     };
@@ -170,17 +172,17 @@ describe("Search result HTML scraper", () => {
         });
 
         it.each`
-            test                            | expectedError                        | html
-            ${"Bad markup"}                 | ${"Kijiji result JSON not present"}  | ${"Bad markup"}
-            ${"Missing __NEXT_DATA__"}      | ${"Kijiji result JSON not present"}  | ${"<html></html>"}
-            ${"Empty __NEXT_DATA__"}        | ${"Result JSON could not be parsed"} | ${createResultHTML({})}
-            ${"Missing props property"}     | ${"Result JSON could not be parsed"} | ${createResultHTML({ abc: 123 })}
-            ${"Missing pageProps property"} | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: {} })}
-            ${"Missing listings property"}  | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: { pageProps: {} } })}
-            ${"Missing URL"}                | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ id: "123", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing ID"}                 | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing title"}              | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing date"}               | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", title: "abc", adSource: "ORGANIC" }]))}
+            test                                   | expectedError                        | html
+            ${"Bad markup"}                        | ${"Kijiji result JSON not present"}  | ${"Bad markup"}
+            ${"Missing __NEXT_DATA__"}             | ${"Kijiji result JSON not present"}  | ${"<html></html>"}
+            ${"Empty __NEXT_DATA__"}               | ${"Result JSON could not be parsed"} | ${createResultHTML({})}
+            ${"Missing props property"}            | ${"Result JSON could not be parsed"} | ${createResultHTML({ abc: 123 })}
+            ${"Missing pageProps property"}        | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: {} })}
+            ${"Missing __APOLLO_STATE__ property"} | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: { pageProps: {} } })}
+            ${"Missing URL"}                       | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ id: "123", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing ID"}                        | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing title"}                     | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing date"}                      | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", title: "abc", adSource: "ORGANIC" }]))}
         `("should throw error if results page is invalid ($test)", async ({ expectedError, html }) => {
             fetchSpy.mockResolvedValueOnce({ text: () => html });
 
@@ -318,7 +320,7 @@ describe("Search result HTML scraper", () => {
             expect(pageResults[0].isScraped()).toBe(false);
         });
 
-        it("should exclude featured ads", async () => {
+        it("should only include non-featured ads", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([
                 {
                     seoUrl: "/some-path-1",
@@ -335,7 +337,11 @@ describe("Search result HTML scraper", () => {
                     description: "My ad description",
                     activationDate: (new Date()).toISOString(),
                     adSource: "MONSANTO"
-                }
+                },
+                {
+                    adSource: null
+                },
+                null as any
             ]))});
 
             const { pageResults } = await search();
