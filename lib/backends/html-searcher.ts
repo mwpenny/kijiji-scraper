@@ -31,16 +31,19 @@ function parseResultsHTML(html: string): Ad[] {
         throw new Error(`Kijiji result JSON not present. ${POSSIBLE_BAD_MARKUP}`);
     }
 
-    const allAds: any[] | undefined = JSON.parse(resultJson)
+    const parsedResultJson: any | undefined = JSON.parse(resultJson)
         .props
         ?.pageProps
-        ?.listings;
-    if (allAds === undefined) {
+        ?.__APOLLO_STATE__;
+    if (parsedResultJson === undefined) {
         throw new Error(`Result JSON could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
     }
 
     // All non-sponsored ads
-    const filteredAds = allAds.filter(ad => ad.adSource === "ORGANIC");
+    const filteredAds = Object.entries(parsedResultJson).filter(entry => {
+        return entry[0].toLowerCase().startsWith("listing") &&
+               (entry[1] as any)?.adSource?.toLowerCase() === "organic";
+    }).map(entry => entry[1] as any);
 
     for (const ad of filteredAds) {
         if (!ad.seoUrl || !ad.id || !ad.title || !ad.activationDate) {
