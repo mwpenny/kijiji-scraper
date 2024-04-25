@@ -7,6 +7,13 @@ module.exports = {
         "categories.ts",
         "locations.ts"
     ],
+    globals: {
+        "ts-jest": {
+            tsconfig: {
+                target: "es2019"
+            }
+        }
+    },
     testEnvironment: "node",
     testMatch: [
         "**/test/**.spec.ts"
