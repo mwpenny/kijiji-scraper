@@ -272,14 +272,14 @@ export function search(params: SearchParameters, options: SearchOptions & Scrape
                 if (optionsForSearch.resultDetailsDelayMs > 0) {
                     for (const ad of results) {
                         if (!ad.isScraped()) {
-                            await ad.scrape();
+                            await ad.scrape(options);
                             await sleep(optionsForSearch.resultDetailsDelayMs);
                         }
                     }
                 } else {
                     await Promise.all(results.map(ad => {
                         if (!ad.isScraped()) {
-                            return ad.scrape();
+                            return ad.scrape(options);
                         }
                         return Promise.resolve();
                     }));

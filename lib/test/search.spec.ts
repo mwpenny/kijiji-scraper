@@ -229,8 +229,8 @@ describe.each`
 
                 expectSearcherCall();
                 expect(scraperSpy.mock.calls).toEqual([
-                    ["http://example.com/1", undefined],
-                    ["http://example.com/2", undefined]
+                    ["http://example.com/1", expect.objectContaining({ scraperType })],
+                    ["http://example.com/2", expect.objectContaining({ scraperType })]
                 ]);
                 expect(ads).toEqual([
                     expect.objectContaining({ title: "My title" }),
