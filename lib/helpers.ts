@@ -43,9 +43,9 @@ export function isNumber(value: string): boolean {
 
 export function getLargeImageURL(url: string): string {
     // Kijiji image URLs typically end with "?rule=kijijica-<num>-<format>",
-    // where "<num>" is a number indicating the width. 960px is the largest
+    // where "<num>" is a number indicating the width. 1600px is the largest
     // I've found to work.
-    return url.replace(IMG_REGEX, "?rule=kijijica-960-");
+    return url.replace(IMG_REGEX, "?rule=kijijica-1600-");
 }
 
 export function cleanAdDescription(text: string): string {

@@ -58,8 +58,8 @@ describe("Helpers", () => {
     it.each`
         test             | url                                                  | expectedURL
         ${"regular URL"} | ${"http://example.com"}                              | ${"http://example.com"}
-        ${"upsize JPG"}  | ${"http://example.com/image?rule=kijijica-100-jpg"}  | ${"http://example.com/image?rule=kijijica-960-jpg"}
-        ${"upsize WEBP"} | ${"http://example.com/image?rule=kijijica-640-webp"} | ${"http://example.com/image?rule=kijijica-960-webp"}
+        ${"upsize JPG"}  | ${"http://example.com/image?rule=kijijica-100-jpg"}  | ${"http://example.com/image?rule=kijijica-1600-jpg"}
+        ${"upsize WEBP"} | ${"http://example.com/image?rule=kijijica-640-webp"} | ${"http://example.com/image?rule=kijijica-1600-webp"}
     `("getLargeImageURL should upsize image URLs ($test)", ({ url, expectedURL }) => {
         expect(getLargeImageURL(url)).toBe(expectedURL);
     });
