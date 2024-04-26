@@ -201,7 +201,7 @@ Searches are performed using the `search()` function:
     * **Optional parameters:**
         There are many different search parameters. Some of these can be used in any search (i.e., `minPrice`), but most are category-specific. Additionally, some parameters are specific to which `scraperType` is being used (see [Scraper Options](#scraper-options) for details on how to switch).
 
-        * Some known parameters available when using _either_ the `"api"` (default) or `"html"` `scraperType`:
+        * Some known parameters available when using _either_ the `"html"` (default) or `"api"` (currently broken) `scraperType`:
 
             |Parameter   |Type  |Description                                                  |
             |------------|------|-------------------------------------------------------------|
@@ -209,7 +209,7 @@ Searches are performed using the `search()` function:
             |`maxPrice`  |Number|Maximum price of returned items                              |
             |`adType`    |String|Type of ad (`"OFFER"`, `"WANTED"`, or `undefined` - for both). If using the `"api"` `scraperType` then `"OFFERED"` must be used instead of `"OFFER"`.|
 
-        * Some known parameters available when using the `"api"` (default) `scraperType`:
+        * Some known parameters available when using the `"api"` (currently broken) `scraperType`:
 
             |Parameter   |Type  |Description                                                                                                           |
             |------------|------|----------------------------------------------------------------------------------------------------------------------|
@@ -218,7 +218,7 @@ Searches are performed using the `search()` function:
             |`distance`  |Number|Distance in kilometers                                                                                                |
             |`priceType` |String|Type of price (e.g., `"SPECIFIED_AMOUNT"`, `"PLEASE_CONTACT"`, `"FREE"`, `"SWAP_TRADE"`)                              |
 
-        * Some known parameters available when using the `"html"` `scraperType`:
+        * Some known parameters available when using the `"html"` (default) `scraperType`:
 
             Parameters to use with the `scraperType="html"` can be easily found by using your browser's developer tools and performing a custom search on the Kijiji website. After submitting your search on Kijiji or updating the filter being applied, use your browser's network monitoring tool to examine the request for `https://www.kijiji.ca/b-search.html`. Any parameter used in the query string for this request is able to be specified in `params`. A few examples include:
 
@@ -285,4 +285,4 @@ Functions that involve retrieving data from Kijiji (`Ad.Get()`, `Ad.scrape()`, a
 
 |Option        |Type    |Default|Description                                  |
 |--------------|--------|-------|---------------------------------------------|
-|`scraperType` |String  |`"api"`|How to scrape Kijiji. `"api"` to use the mobile API (default) and `"html"` to scrape the website. If you have trouble with one, try the other. It seems that the mobile API doesn't have a rate limit or lockout mechanism (_yet_; please don't abuse this).
+|`scraperType` |String  |`"api"`|How to scrape Kijiji. `"html"` to scrape the website (default) and `"api"` to use the mobile API (currently broken). If you have trouble with one, try the other. It seems that the mobile API doesn't have a rate limit or lockout mechanism (_yet_; please don't abuse this).|

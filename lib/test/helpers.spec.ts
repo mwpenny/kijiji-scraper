@@ -98,8 +98,8 @@ describe("Helpers", () => {
                 expect(getScraperOptions(scraperOptions)).toEqual(scraperOptions);
             });
 
-            it("should default to API scraper", () => {
-                expect(getScraperOptions({})).toEqual({ scraperType: ScraperType.API });
+            it("should default to HTML scraper", () => {
+                expect(getScraperOptions({})).toEqual({ scraperType: ScraperType.HTML });
             });
         });
     });

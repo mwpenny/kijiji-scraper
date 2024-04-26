@@ -61,7 +61,7 @@ export function getScraperOptions(options: ScraperOptions): Required<ScraperOpti
 
     // Option defaults
     if (scraperOptions.scraperType === undefined) {
-        scraperOptions.scraperType = ScraperType.API;
+        scraperOptions.scraperType = ScraperType.HTML;
     }
 
     const validScraperTypes = Object.values(ScraperType);
