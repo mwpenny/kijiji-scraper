@@ -17,13 +17,9 @@ const KIJIJI_SEARCH_URL = KIJIJI_BASE_URL + "/b-search.html";
 const LOCATION_REGEX = /(.+)(\/.*)$/;
 
 /* Extracts ad information from the HTML of a Kijiji ad results page */
-function parseResultsHTML(html: string): Ad[] {
+function parseResultsHTML(html: string): PageResults {
     const adResults: Ad[] = [];
     const $ = cheerio.load(html);
-
-    if (html.trim().length === 0) {
-        return adResults;
-    }
 
     // Kijiji is nice and gives us an object containing ad info
     const resultJson = $("script#__NEXT_DATA__").text().trim();
@@ -39,18 +35,30 @@ function parseResultsHTML(html: string): Ad[] {
         throw new Error(`Result JSON could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
     }
 
+    // Information to determine if we are on the last page
+    const paginationInfo = Object.values<any>(
+        parsedResultJson.ROOT_QUERY || {}
+    ).find((value: any) => {
+        return value.pagination !== undefined &&
+               value.pagination.offset !== undefined &&
+               value.pagination.limit !== undefined &&
+               value.pagination.totalCount !== undefined;
+    })?.pagination;
+    if (paginationInfo === undefined) {
+        throw new Error(`Pagination information could not be found. ${POSSIBLE_BAD_MARKUP}`);
+    }
+
     // All non-sponsored ads
     const filteredAds = Object.entries(parsedResultJson).filter(entry => {
-        return entry[0].toLowerCase().startsWith("listing") &&
+        return entry[0].toLowerCase().startsWith("standardlisting") &&
                (entry[1] as any)?.adSource?.toLowerCase() === "organic";
     }).map(entry => entry[1] as any);
 
     for (const ad of filteredAds) {
-        if (!ad.seoUrl || !ad.id || !ad.title || !ad.activationDate) {
+        if (!ad.url || !ad.id || !ad.title || !ad.activationDate) {
             throw new Error(`Result ad could not be parsed. ${POSSIBLE_BAD_MARKUP}`);
         }
 
-        const url = KIJIJI_BASE_URL + ad.seoUrl;
         const info: Partial<AdInfo> = {
             id: ad.id,
             title: ad.title.trim(),
@@ -59,10 +67,13 @@ function parseResultsHTML(html: string): Ad[] {
             description: (ad.description || "").trim()
         };
 
-        adResults.push(new Ad(url, info));
+        adResults.push(new Ad(ad.url, info));
     }
 
-    return adResults;
+    return {
+        pageResults: adResults,
+        isLastPage: paginationInfo.offset + paginationInfo.limit >= paginationInfo.totalCount
+    };
 }
 
 /**
@@ -110,9 +121,6 @@ export class HTMLSearcher {
                 }
                 return res.text();
             })
-            .then(body => ({
-                pageResults: parseResultsHTML(body),
-                isLastPage: body.indexOf("pagination-next-link") === -1
-            }));
+            .then(parseResultsHTML);
     }
 }

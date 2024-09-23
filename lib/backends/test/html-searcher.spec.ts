@@ -7,7 +7,7 @@ import { HTMLSearcher } from "../html-searcher";
 import * as helpers from "../../helpers";
 
 type MockListing = {
-    seoUrl: string;
+    url: string;
     id: string;
     title: string;
     description: string;
@@ -20,9 +20,20 @@ const createResultInfo = (listings: Partial<MockListing>[] = []) => {
     return {
         props: {
             pageProps: {
-                __APOLLO_STATE__: Object.fromEntries(
-                    listings.map((listing, i) => [`ListingV2:${i}`, listing])
-                )
+                __APOLLO_STATE__: {
+                    ...Object.fromEntries(
+                        listings.map((listing, i) => [`StandardListing:${i}`, listing])
+                    ),
+                    ROOT_QUERY: {
+                        "searchResultsByPageUrl:/some/path": {
+                            pagination: {
+                                offset: 0,
+                                limit: listings.length,
+                                totalCount: listings.length
+                            }
+                        }
+                    }
+                }
             }
         }
     };
@@ -172,17 +183,22 @@ describe("Search result HTML scraper", () => {
         });
 
         it.each`
-            test                                   | expectedError                        | html
-            ${"Bad markup"}                        | ${"Kijiji result JSON not present"}  | ${"Bad markup"}
-            ${"Missing __NEXT_DATA__"}             | ${"Kijiji result JSON not present"}  | ${"<html></html>"}
-            ${"Empty __NEXT_DATA__"}               | ${"Result JSON could not be parsed"} | ${createResultHTML({})}
-            ${"Missing props property"}            | ${"Result JSON could not be parsed"} | ${createResultHTML({ abc: 123 })}
-            ${"Missing pageProps property"}        | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: {} })}
-            ${"Missing __APOLLO_STATE__ property"} | ${"Result JSON could not be parsed"} | ${createResultHTML({ props: { pageProps: {} } })}
-            ${"Missing URL"}                       | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ id: "123", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing ID"}                        | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing title"}                     | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
-            ${"Missing date"}                      | ${"Result ad could not be parsed"}   | ${createResultHTML(createResultInfo([{ seoUrl: "/some-path", id: "123", title: "abc", adSource: "ORGANIC" }]))}
+            test                                         | expectedError                                  | html
+            ${"Bad markup"}                              | ${"Kijiji result JSON not present"}            | ${"Bad markup"}
+            ${"Missing __NEXT_DATA__"}                   | ${"Kijiji result JSON not present"}            | ${"<html></html>"}
+            ${"Empty __NEXT_DATA__"}                     | ${"Result JSON could not be parsed"}           | ${createResultHTML({})}
+            ${"Missing props property"}                  | ${"Result JSON could not be parsed"}           | ${createResultHTML({ abc: 123 })}
+            ${"Missing pageProps property"}              | ${"Result JSON could not be parsed"}           | ${createResultHTML({ props: {} })}
+            ${"Missing __APOLLO_STATE__ property"}       | ${"Result JSON could not be parsed"}           | ${createResultHTML({ props: { pageProps: {} } })}
+            ${"Missing ROOT_QUERY property"}             | ${"Pagination information could not be found"} | ${createResultHTML({ props: { pageProps: { __APOLLO_STATE__: {} } } })}
+            ${"Missing object with pagination property"} | ${"Pagination information could not be found"} | ${createResultHTML({ props: { pageProps: { __APOLLO_STATE__: { dummy: {} } } } })}
+            ${"Pagination missing offset property"}      | ${"Pagination information could not be found"} | ${createResultHTML({ props: { pageProps: { __APOLLO_STATE__: { dummy: { pagination: {} } } } } })}
+            ${"Pagination missing limit property"}       | ${"Pagination information could not be found"} | ${createResultHTML({ props: { pageProps: { __APOLLO_STATE__: { dummy: { pagination: { offset: 0 } } } } } })}
+            ${"Pagination missing totalCount property"}  | ${"Pagination information could not be found"} | ${createResultHTML({ props: { pageProps: { __APOLLO_STATE__: { dummy: { pagination: { offset: 0, limit: 0 } } } } } })}
+            ${"Missing URL"}                             | ${"Result ad could not be parsed"}             | ${createResultHTML(createResultInfo([{ id: "123", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing ID"}                              | ${"Result ad could not be parsed"}             | ${createResultHTML(createResultInfo([{ url: "http://example.com/some-path", title: "abc", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing title"}                           | ${"Result ad could not be parsed"}             | ${createResultHTML(createResultInfo([{ url: "http://example.com/some-path", id: "123", activationDate: "2023-09-06T23:57:42.565Z", adSource: "ORGANIC" }]))}
+            ${"Missing date"}                            | ${"Result ad could not be parsed"}             | ${createResultHTML(createResultInfo([{ url: "http://example.com/some-path", id: "123", title: "abc", adSource: "ORGANIC" }]))}
         `("should throw error if results page is invalid ($test)", async ({ expectedError, html }) => {
             fetchSpy.mockResolvedValueOnce({ text: () => html });
 
@@ -202,7 +218,7 @@ describe("Search result HTML scraper", () => {
 
         it("should scrape ID", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 activationDate: (new Date()).toISOString(),
@@ -218,7 +234,7 @@ describe("Search result HTML scraper", () => {
 
         it("should scrape title", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
@@ -244,7 +260,7 @@ describe("Search result HTML scraper", () => {
             getLargeImageURLSpy.mockImplementation(url => url ? url + "_large" : url);
 
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
@@ -266,7 +282,7 @@ describe("Search result HTML scraper", () => {
         it("should scrape date", async () => {
             const date = new Date();
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
@@ -286,7 +302,7 @@ describe("Search result HTML scraper", () => {
 
         it("should scrape description", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
@@ -304,7 +320,7 @@ describe("Search result HTML scraper", () => {
 
         it("should scrape url", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
@@ -315,7 +331,7 @@ describe("Search result HTML scraper", () => {
             const { pageResults } = await search();
             validateRequestHeaders();
             expect(pageResults).toEqual([expect.objectContaining({
-                url: "https://www.kijiji.ca/some-path"
+                url: "http://example.com/some-path"
             })]);
             expect(pageResults[0].isScraped()).toBe(false);
         });
@@ -323,7 +339,7 @@ describe("Search result HTML scraper", () => {
         it("should only include non-featured ads", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([
                 {
-                    seoUrl: "/some-path-1",
+                    url: "http://example.com/some-path-1",
                     id: "123",
                     title: "My ad title",
                     description: "My ad description",
@@ -331,7 +347,7 @@ describe("Search result HTML scraper", () => {
                     adSource: "ORGANIC"
                 },
                 {
-                    seoUrl: "/some-path-2",
+                    url: "http://example.com/some-path-2",
                     id: "456",
                     title: "Non-organic ad",
                     description: "My ad description",
@@ -354,14 +370,14 @@ describe("Search result HTML scraper", () => {
         it("should scrape each result ad", async () => {
             fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(createResultInfo([
                 {
-                    seoUrl: "/some-path-1",
+                    url: "http://example.com/some-path-1",
                     id: "1",
                     title: "Ad 1",
                     activationDate: (new Date(123)).toISOString(),
                     adSource: "ORGANIC"
                 },
                 {
-                    seoUrl: "/some-path-2",
+                    url: "http://example.com/some-path-2",
                     id: "2",
                     title: "Ad 2",
                     activationDate: (new Date(123)).toISOString(),
@@ -392,33 +408,29 @@ describe("Search result HTML scraper", () => {
             ${true}
             ${false}
         `("should detect last page (isLastPage=$isLastPage)", async ({ isLastPage }) => {
-            let mockResponse = createResultHTML(createResultInfo([{
-                seoUrl: "/some-path",
+            const resultInfo = createResultInfo([{
+                url: "http://example.com/some-path",
                 id: "123",
                 title: "My ad title",
                 description: "My ad description",
                 activationDate: (new Date()).toISOString(),
                 adSource: "ORGANIC"
-            }]));
+            }]);
 
             if (!isLastPage) {
-                mockResponse += "pagination-next-link";
+                // By default, createResultInfo() reports limit === totalCount (i.e., one page)
+                // Adding one to the total count indicates there is a second page with one result
+                Object.values(
+                    resultInfo.props.pageProps.__APOLLO_STATE__.ROOT_QUERY
+                )[0].pagination.totalCount += 1;
             }
-            fetchSpy.mockResolvedValueOnce({ text: () => mockResponse });
+            fetchSpy.mockResolvedValueOnce({ text: () => createResultHTML(resultInfo) });
 
             const result = await search();
             validateRequestHeaders();
             expect(result.pageResults.length).toBe(1);
             expect(result.pageResults[0].isScraped()).toBe(false);
             expect(result.isLastPage).toBe(isLastPage);
-        });
-
-        it("should handle empty response", async () => {
-            fetchSpy.mockResolvedValueOnce({ text: () => "" });
-
-            const { pageResults } = await search();
-            validateRequestHeaders();
-            expect(pageResults.length).toBe(0);
         });
     });
 });
